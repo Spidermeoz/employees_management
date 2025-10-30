@@ -5,7 +5,7 @@ import Dashboard from "../pages/dashboard/Dashboard";
 import EmployeeList from "../pages/employees/EmployeeList";
 import EmployeeForm from "../pages/employees/EmployeeForm";
 import EmployeeDetail from "../pages/employees/EmployeeDetail";
-// import DepartmentList from "../pages/departments/DepartmentList";
+import DepartmentList from "../pages/departments/DepartmentList";
 // import Profile from "../pages/profile/Profile";
 
 export const router = createBrowserRouter([
@@ -18,7 +18,7 @@ export const router = createBrowserRouter([
       { path: "employees", element: <EmployeeList /> },
       { path: "employees/:id", element: <EmployeeDetail /> },
       { path: "employees/new", element: <EmployeeForm /> },
-    //   { path: "departments", element: <DepartmentList /> },
+      { path: "departments", element: <DepartmentList /> },
     //   { path: "profile", element: <Profile /> }
     ]
   }
