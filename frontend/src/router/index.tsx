@@ -7,7 +7,9 @@ import EmployeeForm from "../pages/employees/EmployeeForm";
 import EmployeeDetail from "../pages/employees/EmployeeDetail";
 import EmployeeEdit from "../pages/employees/EmployeeEdit";
 import DepartmentList from "../pages/departments/DepartmentList";
+import DepartmentForm from "../pages/departments/DepartmentForm";
 import Profile from "../pages/profile/Profile";
+import NotFound from "../pages/errors/NotFound";
 
 export const router = createBrowserRouter([
   { path: "/", element: <Login /> },
@@ -21,7 +23,11 @@ export const router = createBrowserRouter([
       { path: "employees/new", element: <EmployeeForm /> },
       { path: "employees/:id/edit", element: <EmployeeEdit /> },
       { path: "departments", element: <DepartmentList /> },
-      { path: "profile", element: <Profile /> }
+      { path: "departments/new", element: <DepartmentForm /> },
+      { path: "departments/:id/edit", element: <DepartmentForm /> },
+      { path: "profile", element: <Profile /> },
+      { path: "*", element: <NotFound /> },
     ]
-  }
+  },
+  { path: "*", element: <NotFound /> },
 ]);
