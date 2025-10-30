@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "code": "EMP001",
+    "full_name": "Nguyen Van A",
+    "email": "a.nguyen@example.com",
+    "phone": "0912345678",
+    "gender": "male",
+    "position": "Nhân viên IT",
+    "status": "active",
+    "department": "IT",
+    "created_at": "2024-09-10"
+  },
+  {
+    "id": 2,
+    "code": "EMP002",
+    "full_name": "Tran Thi B",
+    "email": "b.tran@example.com",
+    "phone": "0987654321",
+    "gender": "female",
+    "position": "HR Executive",
+    "status": "inactive",
+    "department": "HR",
+    "created_at": "2024-08-02"
+  }
+]
