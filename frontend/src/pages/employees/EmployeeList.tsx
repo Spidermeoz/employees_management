@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
-import { Search, Plus, Pencil, Trash2, Filter } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Search, Plus, Pencil, Trash2, Filter, Eye } from "lucide-react";
 import employeesData from "../../mock/employees.json"; // mock data file
 
 interface Employee {
@@ -20,6 +21,8 @@ export default function EmployeeList() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     setEmployees(employeesData as Employee[]);
   }, []);
@@ -30,8 +33,7 @@ export default function EmployeeList() {
         e.full_name.toLowerCase().includes(search.toLowerCase()) ||
         e.email.toLowerCase().includes(search.toLowerCase()) ||
         e.code.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus =
-        filterStatus === "all" || e.status === filterStatus;
+      const matchesStatus = filterStatus === "all" || e.status === filterStatus;
       return matchesSearch && matchesStatus;
     });
   }, [employees, search, filterStatus]);
@@ -44,15 +46,18 @@ export default function EmployeeList() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <h1 className="text-2xl font-semibold text-slate-800">Danh sách nhân viên</h1>
+        <h1 className="text-2xl font-semibold text-slate-800">
+          Danh sách nhân viên
+        </h1>
 
         <button className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow hover:bg-slate-800">
           <Plus className="h-4 w-4" /> Thêm nhân viên
         </button>
       </div>
 
-      {/* Search + Filter bar */}
+      {/* Search + Filter */}
       <div className="flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="flex w-full max-w-sm items-center gap-2 rounded-xl border px-3 py-2">
           <Search className="h-4 w-4 text-slate-400" />
@@ -95,17 +100,23 @@ export default function EmployeeList() {
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
+                <td
+                  colSpan={7}
+                  className="px-4 py-6 text-center text-slate-500"
+                >
                   Không có nhân viên nào phù hợp.
                 </td>
               </tr>
             )}
+
             {filtered.map((emp) => (
               <tr
                 key={emp.id}
                 className="border-t hover:bg-slate-50 transition-colors"
               >
-                <td className="px-4 py-3 font-medium text-slate-800">{emp.code}</td>
+                <td className="px-4 py-3 font-medium text-slate-800">
+                  {emp.code}
+                </td>
                 <td className="px-4 py-3">{emp.full_name}</td>
                 <td className="px-4 py-3">{emp.email}</td>
                 <td className="px-4 py-3">{emp.department}</td>
@@ -121,13 +132,29 @@ export default function EmployeeList() {
                     {emp.status === "active" ? "Hoạt động" : "Tạm nghỉ"}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <button className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-blue-600 hover:bg-blue-50">
+                <td className="px-4 py-3 text-right space-x-1">
+                  {/* 👁 Nút xem chi tiết */}
+                  <button
+                    onClick={() => navigate(`/app/employees/${emp.id}`)}
+                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-slate-700 hover:bg-slate-100"
+                    title="Xem chi tiết"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
+
+                  {/* ✏️ Nút chỉnh sửa */}
+                  <button
+                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-blue-600 hover:bg-blue-50"
+                    title="Chỉnh sửa"
+                  >
                     <Pencil className="h-4 w-4" />
                   </button>
+
+                  {/* 🗑 Nút xóa */}
                   <button
                     onClick={() => handleDelete(emp.id)}
                     className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-red-600 hover:bg-red-50"
+                    title="Xóa nhân viên"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
