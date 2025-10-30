@@ -52,7 +52,10 @@ export default function EmployeeList() {
           Danh sách nhân viên
         </h1>
 
-        <button className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow hover:bg-slate-800">
+        <button
+          onClick={() => navigate("/app/employees/new")}
+          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow hover:bg-slate-800"
+        >
           <Plus className="h-4 w-4" /> Thêm nhân viên
         </button>
       </div>
@@ -144,6 +147,7 @@ export default function EmployeeList() {
 
                   {/* ✏️ Nút chỉnh sửa */}
                   <button
+                    onClick={() => navigate(`/app/employees/${emp.id}/edit`)}
                     className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-blue-600 hover:bg-blue-50"
                     title="Chỉnh sửa"
                   >
