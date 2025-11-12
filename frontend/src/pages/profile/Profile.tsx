@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { Save, UserCircle2 } from "lucide-react";
-// Sau này bạn có thể lấy user từ Zustand:
+// Sau này có thể lấy user thật bằng Zustand hoặc API:
 // import { useUserStore } from "../../store/userStore";
 
 export default function Profile() {
-  // Mock user hiện tại (sau này thay bằng Zustand hoặc API)
+  // Mock user hiện tại (tạm thời)
   const [user, setUser] = useState({
+    id: 1,
     username: "admin",
     full_name: "Administrator",
     email: "admin@example.com",
@@ -15,7 +16,9 @@ export default function Profile() {
 
   const [formData, setFormData] = useState(user);
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(false);
 
+  // Xử lý thay đổi form
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -24,12 +27,23 @@ export default function Profile() {
     setSaved(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Xử lý lưu thông tin
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Cập nhật hồ sơ:", formData);
-    setUser(formData);
-    setSaved(true);
-    alert("Cập nhật thông tin cá nhân thành công!");
+    setLoading(true);
+    try {
+      // Giả lập API PUT
+      console.log("Cập nhật hồ sơ:", formData);
+      setTimeout(() => {
+        setUser(formData);
+        setSaved(true);
+        setLoading(false);
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+      setLoading(false);
+      alert("Có lỗi xảy ra khi cập nhật thông tin!");
+    }
   };
 
   return (
@@ -42,9 +56,10 @@ export default function Profile() {
         </p>
       </div>
 
-      {/* Thông tin cơ bản */}
+      {/* Form chính */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Avatar */}
           <div className="flex flex-col items-center text-center space-y-3">
             {formData.avatar_url ? (
               <img
@@ -72,6 +87,7 @@ export default function Profile() {
             </div>
           </div>
 
+          {/* Thông tin cơ bản */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {/* Tên đăng nhập */}
             <div>
@@ -82,13 +98,12 @@ export default function Profile() {
                 type="text"
                 name="username"
                 value={formData.username}
-                onChange={handleChange}
                 disabled
                 className="w-full rounded-lg border bg-slate-100 px-3 py-2 text-sm text-slate-500 cursor-not-allowed"
               />
             </div>
 
-            {/* Họ tên */}
+            {/* Họ và tên */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Họ và tên
@@ -131,20 +146,25 @@ export default function Profile() {
           </div>
 
           {/* Nút lưu */}
-          <div className="flex justify-end">
+          <div className="flex justify-end items-center gap-3">
+            {saved && (
+              <span className="text-green-600 text-sm font-medium">
+                ✅ Đã lưu thay đổi thành công
+              </span>
+            )}
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow hover:bg-slate-800"
+              disabled={loading}
+              className={`inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium text-white shadow ${
+                loading
+                  ? "bg-slate-400 cursor-not-allowed"
+                  : "bg-slate-900 hover:bg-slate-800"
+              }`}
             >
-              <Save className="h-4 w-4" /> Lưu thay đổi
+              <Save className="h-4 w-4" />{" "}
+              {loading ? "Đang lưu..." : "Lưu thay đổi"}
             </button>
           </div>
-
-          {saved && (
-            <p className="text-green-600 text-sm font-medium text-right">
-              ✅ Đã lưu thay đổi thành công
-            </p>
-          )}
         </form>
       </div>
     </div>

@@ -1,19 +1,53 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Mail, Phone, Calendar, Building2, UserCircle2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Mail,
+  Phone,
+  Calendar,
+  Building2,
+  UserCircle2,
+  MapPin,
+  IdCard,
+  GraduationCap,
+} from "lucide-react";
 import employeesData from "../../mock/employees.json";
+
+interface Department {
+  id: number;
+  name: string;
+}
+
+interface Position {
+  id: number;
+  name: string;
+}
+
+interface Education {
+  id: number;
+  level: string;
+  major?: string;
+  university?: string;
+}
 
 interface Employee {
   id: number;
   code: string;
   full_name: string;
-  email: string;
-  phone: string;
   gender: string;
-  position: string;
+  date_of_birth?: string;
+  address?: string;
+  hometown?: string;
+  phone?: string;
+  email: string;
+  citizen_id?: string;
   status: string;
-  department: string;
-  created_at: string;
+  avatar_url?: string;
+  hired_at?: string;
+  department?: Department;
+  position?: Position;
+  education?: Education;
+  created_at?: string;
 }
 
 export default function EmployeeDetail() {
@@ -22,7 +56,7 @@ export default function EmployeeDetail() {
   const [employee, setEmployee] = useState<Employee | null>(null);
 
   useEffect(() => {
-    // Giả lập lấy dữ liệu từ JSON mock
+    // Giả lập dữ liệu (sau này thay bằng API call)
     const found = (employeesData as Employee[]).find(
       (e) => e.id === Number(id)
     );
@@ -56,18 +90,29 @@ export default function EmployeeDetail() {
         </button>
       </div>
 
-      {/* Thông tin chính */}
+      {/* Nội dung */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Thông tin bên trái */}
+        {/* Cột trái */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-1">
           <div className="flex flex-col items-center text-center">
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-100">
-              <UserCircle2 className="h-12 w-12 text-slate-400" />
-            </div>
+            {employee.avatar_url ? (
+              <img
+                src={employee.avatar_url}
+                alt={employee.full_name}
+                className="h-24 w-24 rounded-full object-cover border"
+              />
+            ) : (
+              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-100">
+                <UserCircle2 className="h-12 w-12 text-slate-400" />
+              </div>
+            )}
+
             <h2 className="mt-3 text-lg font-semibold text-slate-800">
               {employee.full_name}
             </h2>
-            <p className="text-sm text-slate-500">{employee.position}</p>
+            <p className="text-sm text-slate-500">
+              {employee.position?.name || "Chưa có chức vụ"}
+            </p>
             <p
               className={`mt-2 inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
                 employee.status === "active"
@@ -79,6 +124,7 @@ export default function EmployeeDetail() {
             </p>
           </div>
 
+          {/* Liên hệ */}
           <div className="mt-6 space-y-3 text-sm text-slate-600">
             <div className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-slate-400" />
@@ -90,19 +136,21 @@ export default function EmployeeDetail() {
             </div>
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4 text-slate-400" />
-              <span>{employee.department}</span>
+              <span>{employee.department?.name || "Chưa có phòng ban"}</span>
             </div>
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-slate-400" />
               <span>
-                Ngày tạo:{" "}
-                {new Date(employee.created_at).toLocaleDateString("vi-VN")}
+                Ngày vào công ty:{" "}
+                {employee.hired_at
+                  ? new Date(employee.hired_at).toLocaleDateString("vi-VN")
+                  : "Chưa cập nhật"}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Thông tin chi tiết bên phải */}
+        {/* Cột phải */}
         <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-slate-800 mb-4">
             Chi tiết nhân viên
@@ -123,40 +171,63 @@ export default function EmployeeDetail() {
               </p>
             </div>
             <div>
-              <span className="font-medium text-slate-500">Chức vụ:</span>
-              <p className="mt-1">{employee.position}</p>
-            </div>
-            <div>
-              <span className="font-medium text-slate-500">Phòng ban:</span>
-              <p className="mt-1">{employee.department}</p>
-            </div>
-            <div>
-              <span className="font-medium text-slate-500">Trạng thái:</span>
-              <p
-                className={`mt-1 inline-block rounded-full px-2 py-1 text-xs font-medium ${
-                  employee.status === "active"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-red-100 text-red-700"
-                }`}
-              >
-                {employee.status === "active" ? "Đang làm việc" : "Tạm nghỉ"}
+              <span className="font-medium text-slate-500">Ngày sinh:</span>
+              <p className="mt-1">
+                {employee.date_of_birth
+                  ? new Date(employee.date_of_birth).toLocaleDateString("vi-VN")
+                  : "Chưa cập nhật"}
               </p>
             </div>
             <div>
-              <span className="font-medium text-slate-500">Ngày vào công ty:</span>
+              <span className="font-medium text-slate-500">CMND/CCCD:</span>
+              <div className="flex items-center gap-2 mt-1">
+                <IdCard className="h-4 w-4 text-slate-400" />
+                <p>{employee.citizen_id || "Chưa cập nhật"}</p>
+              </div>
+            </div>
+            <div>
+              <span className="font-medium text-slate-500">Địa chỉ:</span>
+              <div className="flex items-center gap-2 mt-1">
+                <MapPin className="h-4 w-4 text-slate-400" />
+                <p>{employee.address || "Chưa cập nhật"}</p>
+              </div>
+            </div>
+            <div>
+              <span className="font-medium text-slate-500">Quê quán:</span>
+              <p className="mt-1">{employee.hometown || "Chưa cập nhật"}</p>
+            </div>
+            <div>
+              <span className="font-medium text-slate-500">
+                Trình độ học vấn:
+              </span>
+              <div className="flex items-center gap-2 mt-1">
+                <GraduationCap className="h-4 w-4 text-slate-400" />
+                <p>
+                  {employee.education?.level
+                    ? `${employee.education.level} - ${
+                        employee.education.major || ""
+                      }`
+                    : "Chưa cập nhật"}
+                </p>
+              </div>
+            </div>
+            <div>
+              <span className="font-medium text-slate-500">
+                Ngày tạo hồ sơ:
+              </span>
               <p className="mt-1">
                 {employee.created_at
                   ? new Date(employee.created_at).toLocaleDateString("vi-VN")
-                  : "Chưa cập nhật"}
+                  : "Không xác định"}
               </p>
             </div>
           </div>
 
           <div className="mt-8 text-sm text-slate-500">
             <p>
-              <span className="font-semibold text-slate-700">Ghi chú:</span> Đây là
-              bản xem chi tiết nhân viên. Sau này bạn có thể mở rộng phần này để
-              hiển thị lịch sử làm việc, hoạt động, hoặc cập nhật hồ sơ.
+              <span className="font-semibold text-slate-700">Ghi chú:</span> Đây
+              là trang xem chi tiết nhân viên. Sau này bạn có thể mở rộng để
+              hiển thị hợp đồng, bảo hiểm hoặc lịch sử công tác.
             </p>
           </div>
         </div>

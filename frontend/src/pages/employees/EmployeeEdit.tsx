@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
 import employeesData from "../../mock/employees.json";
 import departmentsData from "../../mock/departments.json";
+import positionsData from "../../mock/positions.json";
+import educationsData from "../../mock/educations.json";
 
 interface Employee {
   id: number;
@@ -12,12 +14,13 @@ interface Employee {
   phone: string;
   gender: string;
   date_of_birth?: string;
-  position: string;
   address?: string;
   status: string;
   hired_at?: string;
   avatar_url?: string;
   department_id?: number;
+  position_id?: number;
+  education_id?: number;
 }
 
 export default function EmployeeEdit() {
@@ -34,7 +37,9 @@ export default function EmployeeEdit() {
   }, [id]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
   ) => {
     const { name, value } = e.target;
     setEmployee((prev) => (prev ? { ...prev, [name]: value } : prev));
@@ -45,7 +50,7 @@ export default function EmployeeEdit() {
     if (!employee) return;
 
     if (!employee.full_name.trim() || !employee.email.trim()) {
-      alert("Vui lòng nhập đủ Họ tên và Email.");
+      alert("Vui lòng nhập đầy đủ Họ tên và Email.");
       return;
     }
 
@@ -90,6 +95,21 @@ export default function EmployeeEdit() {
         className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-8"
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {/* Mã NV */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Mã nhân viên
+            </label>
+            <input
+              type="text"
+              name="code"
+              value={employee.code}
+              onChange={handleChange}
+              readOnly
+              className="w-full rounded-lg border bg-slate-100 px-3 py-2 text-sm text-slate-500 cursor-not-allowed"
+            />
+          </div>
+
           {/* Họ và tên */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -188,13 +208,39 @@ export default function EmployeeEdit() {
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Chức vụ
             </label>
-            <input
-              type="text"
-              name="position"
-              value={employee.position}
+            <select
+              name="position_id"
+              value={employee.position_id || ""}
               onChange={handleChange}
               className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
-            />
+            >
+              <option value="">-- Chọn chức vụ --</option>
+              {(positionsData as any[]).map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Trình độ học vấn */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Trình độ học vấn
+            </label>
+            <select
+              name="education_id"
+              value={employee.education_id || ""}
+              onChange={handleChange}
+              className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+            >
+              <option value="">-- Chọn trình độ --</option>
+              {(educationsData as any[]).map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.level} - {e.major}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Địa chỉ */}
@@ -257,7 +303,7 @@ export default function EmployeeEdit() {
           </div>
         </div>
 
-        {/* Nút lưu */}
+        {/* Submit */}
         <div className="flex justify-end">
           <button
             type="submit"

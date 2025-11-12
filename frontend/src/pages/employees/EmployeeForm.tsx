@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
 import employeesData from "../../mock/employees.json";
 import departmentsData from "../../mock/departments.json";
+import positionsData from "../../mock/positions.json";
+import educationsData from "../../mock/educations.json";
 
 interface Employee {
   id: number;
@@ -12,15 +14,13 @@ interface Employee {
   phone: string;
   gender: string;
   date_of_birth?: string;
-  position: string;
   address?: string;
   status: string;
   hired_at?: string;
   avatar_url?: string;
   department_id?: number;
-  department_name?: string;
-  created_by_id?: number;
-  updated_by_id?: number;
+  position_id?: number;
+  education_id?: number;
 }
 
 export default function EmployeeForm() {
@@ -36,13 +36,13 @@ export default function EmployeeForm() {
     phone: "",
     gender: "other",
     date_of_birth: "",
-    position: "",
     address: "",
     status: "active",
     hired_at: "",
     avatar_url: "",
     department_id: undefined,
-    department_name: "",
+    position_id: undefined,
+    education_id: undefined,
   });
 
   useEffect(() => {
@@ -60,7 +60,10 @@ export default function EmployeeForm() {
     >
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name.endsWith("_id") ? Number(value) || undefined : value,
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -194,40 +197,10 @@ export default function EmployeeForm() {
             />
           </div>
 
-          {/* Địa chỉ */}
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Địa chỉ
-            </label>
-            <textarea
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              rows={2}
-              className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300 resize-none"
-              placeholder="Số nhà, đường, quận/huyện, tỉnh/thành..."
-            />
-          </div>
-
-          {/* Chức vụ */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Chức vụ
-            </label>
-            <input
-              type="text"
-              name="position"
-              value={formData.position}
-              onChange={handleChange}
-              className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
-              placeholder="Nhân viên, Trưởng phòng..."
-            />
-          </div>
-
           {/* Phòng ban */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Phòng ban <span className="text-red-500">*</span>
+              Phòng ban
             </label>
             <select
               name="department_id"
@@ -242,6 +215,61 @@ export default function EmployeeForm() {
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Chức vụ */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Chức vụ
+            </label>
+            <select
+              name="position_id"
+              value={formData.position_id || ""}
+              onChange={handleChange}
+              className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+            >
+              <option value="">-- Chọn chức vụ --</option>
+              {(positionsData as any[]).map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Trình độ học vấn */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Trình độ học vấn
+            </label>
+            <select
+              name="education_id"
+              value={formData.education_id || ""}
+              onChange={handleChange}
+              className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+            >
+              <option value="">-- Chọn trình độ --</option>
+              {(educationsData as any[]).map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.level} - {e.major}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Địa chỉ */}
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Địa chỉ
+            </label>
+            <textarea
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              rows={2}
+              className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300 resize-none"
+              placeholder="Số nhà, đường, quận/huyện, tỉnh/thành..."
+            />
           </div>
 
           {/* Trạng thái */}

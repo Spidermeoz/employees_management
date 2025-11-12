@@ -1,0 +1,5 @@
+[
+  { "id": 1, "level": "Đại học", "major": "Công nghệ thông tin" },
+  { "id": 2, "level": "Cao đẳng", "major": "Quản trị nhân lực" },
+  { "id": 3, "level": "Đại học", "major": "Tài chính kế toán" }
+]
