@@ -6,7 +6,9 @@ from app.database import get_db
 from app.models.reward_discipline import RewardDiscipline
 from app.schemas.rewards import RewardCreate, RewardUpdate, RewardResponse
 
-router = APIRouter(prefix="/rewards", tags=["Rewards & Discipline"])
+from app.auth.jwt_bearer import JWTBearer
+
+router = APIRouter(prefix="/rewards", tags=["Rewards & Discipline"], dependencies=[Depends(JWTBearer())])
 
 
 @router.get("/", response_model=List[RewardResponse])

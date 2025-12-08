@@ -8,12 +8,12 @@ from app.models.employees import Employee
 from app.schemas.employees import EmployeeCreate, EmployeeUpdate, EmployeeResponse
 
 # Nếu sau này dùng JWT:
-# from app.auth.jwt_bearer import JWTBearer
+from app.auth.jwt_bearer import JWTBearer
 
 router = APIRouter(
     prefix="/employees",
     tags=["Employees"],
-    # dependencies=[Depends(JWTBearer())]  # Bật cái này sau khi làm xong login JWT
+    dependencies=[Depends(JWTBearer())]  # Bật cái này sau khi làm xong login JWT
 )
 
 

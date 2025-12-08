@@ -12,12 +12,12 @@ from app.schemas.departments import (
 )
 
 # Sau này muốn bảo vệ bằng JWT thì thêm:
-# from app.auth.jwt_bearer import JWTBearer
+from app.auth.jwt_bearer import JWTBearer
 
 router = APIRouter(
     prefix="/departments",
     tags=["Departments"],
-    # dependencies=[Depends(JWTBearer())]  # bật sau khi làm xong login
+    dependencies=[Depends(JWTBearer())]  # bật sau khi làm xong login
 )
 
 

@@ -12,9 +12,12 @@ from app.schemas.salary_grades import (
     SalaryGradeResponse,
 )
 
+from app.auth.jwt_bearer import JWTBearer
+
 router = APIRouter(
     prefix="/salary-grades",
-    tags=["Salary Grades"]
+    tags=["Salary Grades"],
+    dependencies=[Depends(JWTBearer())]
 )
 
 

@@ -6,7 +6,9 @@ from app.database import get_db
 from app.models.payrolls import Payroll
 from app.schemas.payrolls import PayrollCreate, PayrollUpdate, PayrollResponse
 
-router = APIRouter(prefix="/payrolls", tags=["Payrolls"])
+from app.auth.jwt_bearer import JWTBearer
+
+router = APIRouter(prefix="/payrolls", tags=["Payrolls"], dependencies=[Depends(JWTBearer())])
 
 
 @router.get("/", response_model=List[PayrollResponse])

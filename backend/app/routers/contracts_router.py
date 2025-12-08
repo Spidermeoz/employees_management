@@ -1,13 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional
 
 from app.database import get_db
 from app.models.labor_contracts import LaborContract
-from app.schemas.contracts import ContractCreate, ContractUpdate, ContractResponse
+from app.schemas.contracts import ContractCreate, ContractResponse, ContractUpdate
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
-router = APIRouter(prefix="/contracts", tags=["Contracts"])
+from app.auth.jwt_bearer import JWTBearer
+
+router = APIRouter(
+    prefix="/contracts",
+    tags=["Contracts"],
+    dependencies=[Depends(JWTBearer())],  # 🔒 yêu cầu token cho toàn bộ routes trong module
+)
 
 
 @router.get("/", response_model=List[ContractResponse])

@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from app.database import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.routers.auth_router import router as AuthRouter  # sau này dùng
 from app.routers.employees_router import router as EmployeesRouter
 from app.routers.departments_router import router as DepartmentsRouter
 from app.routers.positions_router import router as PositionsRouter
@@ -10,7 +11,6 @@ from app.routers.contracts_router import router as ContractsRouter
 from app.routers.rewards_router import router as RewardsRouter
 from app.routers.payrolls_router import router as PayrollsRouter
 from app.routers.timesheets_router import router as TimesheetsRouter
-from app.routers.auth_router import router as AuthRouter  # sau này dùng
 
 from app import models  # <-- quan trọng: import tất cả models
 

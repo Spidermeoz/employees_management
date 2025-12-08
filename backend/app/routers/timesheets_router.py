@@ -6,7 +6,9 @@ from app.database import get_db
 from app.models.timesheets import Timesheet
 from app.schemas.timesheets import TimesheetCreate, TimesheetUpdate, TimesheetResponse
 
-router = APIRouter(prefix="/timesheets", tags=["Timesheets"])
+from app.auth.jwt_bearer import JWTBearer
+
+router = APIRouter(prefix="/timesheets", tags=["Timesheets"], dependencies=[Depends(JWTBearer())])
 
 
 @router.get("/", response_model=List[TimesheetResponse])

@@ -16,6 +16,7 @@ import {
   FaHandshake,
   FaUsersCog,
 } from "react-icons/fa"; // Import thêm các icon HR
+import { loginApi } from "../../api/client"; // ✅ gọi API thật
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -34,16 +35,24 @@ const LoginPage: React.FC = () => {
     setError("");
     setLoading(true);
 
-    // Giả lập gọi API
-    setTimeout(() => {
-      if (email === "admin@example.com" && password === "admin") {
-        localStorage.setItem("access_token", "FAKE_JWT_TOKEN");
-        navigate("/");
-      } else {
-        setError("Sai tài khoản hoặc mật khẩu!");
-      }
+    try {
+      const res = await loginApi({
+        email,
+        password,
+      });
+
+      // Lưu token & thông tin user vào localStorage
+      localStorage.setItem("access_token", res.access_token);
+      localStorage.setItem("current_user", JSON.stringify(res.user));
+
+      // Điều hướng về dashboard
+      navigate("/", { replace: true });
+    } catch (err: any) {
+      console.error(err);
+      setError("Sai tài khoản hoặc mật khẩu, hoặc server đang gặp sự cố!");
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -69,7 +78,7 @@ const LoginPage: React.FC = () => {
             position: absolute;
             color: rgba(255, 255, 255, 0.04);
             font-size: 10rem;
-            pointer-events: none; /* Đảm bảo không thể click vào icon nền */
+            pointer-events: none;
           }
           .icon-1 { top: 5%; left: 10%; transform: rotate(-15deg); }
           .icon-2 { bottom: 10%; right: 5%; transform: rotate(20deg); }
@@ -150,11 +159,16 @@ const LoginPage: React.FC = () => {
         <div className="card p-4 p-md-5 login-card" style={{ width: "450px" }}>
           {/* Header */}
           <div className="text-center mb-4">
-            <div className="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary text-white mb-3" style={{ width: '80px', height: '80px' }}>
+            <div
+              className="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary text-white mb-3"
+              style={{ width: "80px", height: "80px" }}
+            >
               <FaUser size={35} />
             </div>
             <h2 className="fw-bold mb-1">Chào mừng trở lại!</h2>
-            <p className="text-muted">Vui lòng đăng nhập vào tài khoản HRM của bạn</p>
+            <p className="text-muted">
+              Vui lòng đăng nhập vào tài khoản HRM của bạn
+            </p>
           </div>
 
           {/* Form */}
@@ -183,21 +197,31 @@ const LoginPage: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-              <div className="password-toggle-icon" onClick={() => setShowPassword(!showPassword)}>
+              <div
+                className="password-toggle-icon"
+                onClick={() => setShowPassword(!showPassword)}
+              >
                 {showPassword ? <FaEyeSlash size={22} /> : <FaEye size={22} />}
               </div>
             </div>
 
             {/* Error Message */}
             {error && (
-              <div className="alert alert-danger d-flex align-items-center p-3 mb-3 error-message" role="alert">
+              <div
+                className="alert alert-danger d-flex align-items-center p-3 mb-3 error-message"
+                role="alert"
+              >
                 <FaExclamationCircle className="me-2" />
                 <span>{error}</span>
               </div>
             )}
 
             {/* Login Button */}
-            <button type="submit" className="btn btn-primary btn-login w-100 text-white" disabled={loading}>
+            <button
+              type="submit"
+              className="btn btn-primary btn-login w-100 text-white"
+              disabled={loading}
+            >
               {loading ? (
                 <>
                   <FaSpinner className="fa-spin me-2" />

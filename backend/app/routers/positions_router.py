@@ -11,9 +11,12 @@ from app.schemas.positions import (
     PositionResponse,
 )
 
+from app.auth.jwt_bearer import JWTBearer
+
 router = APIRouter(
     prefix="/positions",
-    tags=["Positions"]
+    tags=["Positions"],
+    dependencies=[Depends(JWTBearer())]
 )
 
 
