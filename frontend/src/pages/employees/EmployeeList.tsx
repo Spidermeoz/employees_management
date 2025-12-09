@@ -1,41 +1,54 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { apiGet } from "../../api/client";
 
-const mockEmployees = [
-  {
-    id: 1,
-    code: "NV001",
-    name: "Nguyễn Văn A",
-    department: "Phòng Kế Toán",
-    position: "Kế toán viên",
-    status: "active",
-  },
-  {
-    id: 2,
-    code: "NV002",
-    name: "Trần Thị B",
-    department: "Phòng Nhân sự",
-    position: "HR Executive",
-    status: "active",
-  },
-  {
-    id: 3,
-    code: "NV003",
-    name: "Phạm Văn C",
-    department: "Phòng IT",
-    position: "Developer",
-    status: "inactive",
-  },
-];
+// Kiểu dữ liệu dựa theo EmployeeResponse
+type Employee = {
+  id: number;
+  code: string;
+  full_name: string;
+  status: string;
+  department?: {
+    name: string;
+  };
+  position?: {
+    name: string;
+  };
+};
 
 const EmployeeList: React.FC = () => {
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
 
-  const filteredEmployees = mockEmployees.filter((emp) =>
-    emp.name.toLowerCase().includes(search.toLowerCase())
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 🔥 Load danh sách nhân viên từ backend
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const data = await apiGet<Employee[]>("/employees");
+        setEmployees(data);
+      } catch (err) {
+        console.error(err);
+        setError("Không thể tải danh sách nhân viên.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
+
+  const filtered = employees.filter((emp) =>
+    emp.full_name.toLowerCase().includes(search.toLowerCase())
   );
+
+  if (loading) return <p className="m-3">Đang tải dữ liệu...</p>;
+
+  if (error) return <div className="alert alert-danger m-3">{error}</div>;
 
   return (
     <div className="container-fluid">
@@ -72,13 +85,16 @@ const EmployeeList: React.FC = () => {
               <th style={{ width: "160px" }}>Hành động</th>
             </tr>
           </thead>
+
           <tbody>
-            {filteredEmployees.map((emp) => (
+            {filtered.map((emp) => (
               <tr key={emp.id}>
                 <td>{emp.code}</td>
-                <td>{emp.name}</td>
-                <td>{emp.department}</td>
-                <td>{emp.position}</td>
+                <td>{emp.full_name}</td>
+
+                <td>{emp.department?.name || "—"}</td>
+                <td>{emp.position?.name || "—"}</td>
+
                 <td>
                   <span
                     className={
@@ -87,7 +103,7 @@ const EmployeeList: React.FC = () => {
                         : "badge bg-secondary"
                     }
                   >
-                    {emp.status === "active" ? "Đang làm" : "Nghỉ việc"}
+                    {emp.status === "active" ? "Đang làm" : "Không hoạt động"}
                   </span>
                 </td>
 
@@ -108,13 +124,13 @@ const EmployeeList: React.FC = () => {
                     ✏ Sửa
                   </button>
 
-                  {/* DELETE (mock, chưa làm backend) */}
+                  {/* DELETE */}
                   <button className="btn btn-sm btn-danger">🗑 Xóa</button>
                 </td>
               </tr>
             ))}
 
-            {filteredEmployees.length === 0 && (
+            {filtered.length === 0 && (
               <tr>
                 <td colSpan={6} className="text-center py-3 text-muted">
                   Không tìm thấy nhân viên nào.

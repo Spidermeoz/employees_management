@@ -1,6 +1,7 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional
 from datetime import date
+from typing import Optional
+
+from pydantic import BaseModel, EmailStr
 
 
 class EmployeeBase(BaseModel):
@@ -26,9 +27,47 @@ class EmployeeUpdate(EmployeeBase):
     gender: Optional[str]
 
 
-class EmployeeResponse(EmployeeBase):
+class DepartmentInfo(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        orm_mode = True
+
+
+class PositionInfo(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        orm_mode = True
+
+
+class SalaryGradeInfo(BaseModel):
+    id: int
+    grade_name: str
+    
+    class Config:
+        orm_mode = True
+
+
+class EmployeeResponse(BaseModel):
     id: int
     code: str
+    full_name: str
+    gender: str
+    dob: Optional[date] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+
+    # JOIN INFO
+    department: Optional[DepartmentInfo]
+    position: Optional[PositionInfo]
+    salary_grade: Optional[SalaryGradeInfo]
+
+    hire_date: Optional[date]
+    status: str
 
     class Config:
         orm_mode = True

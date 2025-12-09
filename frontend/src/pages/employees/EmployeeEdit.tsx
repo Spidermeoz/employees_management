@@ -1,68 +1,39 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { apiGet, apiPut } from "../../api/client";
 
-// Mock data (sau này sẽ gọi API)
-const mockEmployees = [
-  {
-    id: 1,
-    code: "NV001",
-    name: "Nguyễn Văn A",
-    gender: "male",
-    dob: "1995-03-12",
-    email: "vana@example.com",
-    phone: "0901234567",
-    address: "Quận 1, TPHCM",
-    department_id: 1,
-    position_id: 2,
-    salary_grade_id: 1,
-    hire_date: "2020-01-15",
-    status: "active",
-  },
-  {
-    id: 2,
-    code: "NV002",
-    name: "Trần Thị B",
-    gender: "female",
-    dob: "1998-07-20",
-    email: "thib@example.com",
-    phone: "0934567890",
-    address: "Quận 3, TPHCM",
-    department_id: 2,
-    position_id: 1,
-    salary_grade_id: 2,
-    hire_date: "2021-05-10",
-    status: "active",
-  },
-];
-
-// Mock dropdown data
-const mockDepartments = [
-  { id: 1, name: "Phòng Kế Toán" },
-  { id: 2, name: "Phòng Nhân Sự" },
-  { id: 3, name: "Phòng IT" },
-];
-
-const mockPositions = [
-  { id: 1, name: "Nhân viên" },
-  { id: 2, name: "Kế toán viên" },
-  { id: 3, name: "Developer" },
-];
-
-const mockGrades = [
-  { id: 1, name: "Bậc 1" },
-  { id: 2, name: "Bậc 2" },
-  { id: 3, name: "Bậc 3" },
-];
+type Department = { id: number; name: string };
+type Position = { id: number; name: string };
+type SalaryGrade = { id: number; grade_name: string };
+type Employee = {
+  full_name: string;
+  code: string;
+  gender: string;
+  dob: string;
+  email: string;
+  phone: string;
+  address: string;
+  department_id: number;
+  position_id: number;
+  salary_grade_id: number;
+  hire_date: string;
+  status: string;
+};
 
 const EmployeeEdit: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [grades, setGrades] = useState<SalaryGrade[]>([]);
 
   const [form, setForm] = useState({
-    name: "",
+    full_name: "",
     code: "",
     gender: "male",
     dob: "",
@@ -76,31 +47,50 @@ const EmployeeEdit: React.FC = () => {
     status: "active",
   });
 
-  // Lấy mock data theo ID
+  // 🔥 Fetch data thật
   useEffect(() => {
-    const emp = mockEmployees.find((e) => e.id === Number(id));
+    const loadData = async () => {
+      try {
+        const [emp, deps, pos, grads] = await Promise.all([
+          apiGet<Employee>(`/employees/${id}`),
+          apiGet<Department[]>("/departments"),
+          apiGet<Position[]>("/positions"),
+          apiGet<SalaryGrade[]>("/salary-grades"),
+        ]);
 
-    if (emp) {
-      const formattedEmp = {
-        name: emp.name,
-        code: emp.code,
-        gender: emp.gender,
-        dob: emp.dob,
-        email: emp.email,
-        phone: emp.phone,
-        address: emp.address,
-        department_id: String(emp.department_id),
-        position_id: String(emp.position_id),
-        salary_grade_id: String(emp.salary_grade_id),
-        hire_date: emp.hire_date,
-        status: emp.status,
-      };
-      setForm(formattedEmp);
-    }
+        // Fill form bằng dữ liệu từ backend
+        setForm({
+          full_name: emp.full_name,
+          code: emp.code,
+          gender: emp.gender,
+          dob: emp.dob || "",
+          email: emp.email || "",
+          phone: emp.phone || "",
+          address: emp.address || "",
+          department_id: emp.department_id ? String(emp.department_id) : "",
+          position_id: emp.position_id ? String(emp.position_id) : "",
+          salary_grade_id: emp.salary_grade_id
+            ? String(emp.salary_grade_id)
+            : "",
+          hire_date: emp.hire_date || "",
+          status: emp.status,
+        });
 
-    setLoading(false);
+        setDepartments(deps);
+        setPositions(pos);
+        setGrades(grads);
+      } catch (err) {
+        console.error(err);
+        setError("Không thể tải dữ liệu nhân viên.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, [id]);
 
+  // handle change
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -109,15 +99,51 @@ const EmployeeEdit: React.FC = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // submit update
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log("Updated Employee:", form);
-    alert("Cập nhật nhân viên (mock). API chưa kết nối.");
-    navigate("/employees");
+    try {
+      const payload = {
+        full_name: form.full_name,
+        code: form.code,
+        gender: form.gender,
+        dob: form.dob || null,
+        email: form.email || null,
+        phone: form.phone || null,
+        address: form.address || null,
+        department_id: form.department_id ? Number(form.department_id) : null,
+        position_id: form.position_id ? Number(form.position_id) : null,
+        salary_grade_id: form.salary_grade_id
+          ? Number(form.salary_grade_id)
+          : null,
+        hire_date: form.hire_date || null,
+        status: form.status,
+      };
+
+      await apiPut(`/employees/${id}`, payload);
+
+      alert("Cập nhật thành công!");
+      navigate(`/employees/${id}`);
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi khi cập nhật nhân viên!");
+    }
   };
 
-  if (loading) return <p>Đang tải dữ liệu...</p>;
+  if (loading) return <p className="m-3">Đang tải...</p>;
+  if (error)
+    return (
+      <div className="alert alert-danger m-3">
+        {error}
+        <button
+          className="btn btn-secondary mt-2"
+          onClick={() => navigate("/employees")}
+        >
+          Quay lại
+        </button>
+      </div>
+    );
 
   return (
     <div className="container-fluid">
@@ -132,8 +158,8 @@ const EmployeeEdit: React.FC = () => {
             <input
               type="text"
               className="form-control"
-              name="name"
-              value={form.name}
+              name="full_name"
+              value={form.full_name}
               onChange={handleChange}
               required
             />
@@ -229,12 +255,13 @@ const EmployeeEdit: React.FC = () => {
           <div className="col-md-4">
             <label className="form-label">Phòng ban</label>
             <select
-              name="department_id"
               className="form-select"
+              name="department_id"
               value={form.department_id}
               onChange={handleChange}
             >
-              {mockDepartments.map((d) => (
+              <option value="">-- Chọn phòng ban --</option>
+              {departments.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
                 </option>
@@ -245,12 +272,13 @@ const EmployeeEdit: React.FC = () => {
           <div className="col-md-4">
             <label className="form-label">Chức vụ</label>
             <select
-              name="position_id"
               className="form-select"
+              name="position_id"
               value={form.position_id}
               onChange={handleChange}
             >
-              {mockPositions.map((p) => (
+              <option value="">-- Chọn chức vụ --</option>
+              {positions.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
@@ -261,14 +289,15 @@ const EmployeeEdit: React.FC = () => {
           <div className="col-md-4">
             <label className="form-label">Bậc lương</label>
             <select
-              name="salary_grade_id"
               className="form-select"
+              name="salary_grade_id"
               value={form.salary_grade_id}
               onChange={handleChange}
             >
-              {mockGrades.map((g) => (
+              <option value="">-- Chọn bậc lương --</option>
+              {grades.map((g) => (
                 <option key={g.id} value={g.id}>
-                  {g.name}
+                  {g.grade_name}
                 </option>
               ))}
             </select>
@@ -277,8 +306,8 @@ const EmployeeEdit: React.FC = () => {
           <div className="col-md-4">
             <label className="form-label">Trạng thái</label>
             <select
-              name="status"
               className="form-select"
+              name="status"
               value={form.status}
               onChange={handleChange}
             >

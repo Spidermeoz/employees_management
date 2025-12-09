@@ -1,14 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from typing import List, Optional
 from datetime import datetime
-
-from app.database import get_db
-from app.models.employees import Employee
-from app.schemas.employees import EmployeeCreate, EmployeeUpdate, EmployeeResponse
+from typing import List, Optional
 
 # Nếu sau này dùng JWT:
 from app.auth.jwt_bearer import JWTBearer
+from app.database import get_db
+from app.models.employees import Employee
+from app.schemas.employees import EmployeeCreate, EmployeeResponse, EmployeeUpdate
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session, joinedload
 
 router = APIRouter(
     prefix="/employees",
@@ -60,24 +59,20 @@ def list_employees(
 
 
 @router.get("/{employee_id}", response_model=EmployeeResponse)
-def get_employee(
-    employee_id: int,
-    db: Session = Depends(get_db),
-):
-    """
-    Lấy chi tiết 1 nhân viên theo ID
-    """
+def get_employee(employee_id: int, db: Session = Depends(get_db)):
     emp = (
         db.query(Employee)
+        .options(
+            joinedload(Employee.department),
+            joinedload(Employee.position),
+            joinedload(Employee.salary_grade),
+        )
         .filter(Employee.id == employee_id, Employee.deleted == False)
         .first()
     )
 
     if not emp:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Không tìm thấy nhân viên",
-        )
+        raise HTTPException(status_code=404, detail="Không tìm thấy nhân viên")
 
     return emp
 
