@@ -1,46 +1,27 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { apiGet, apiPut } from "../../api/client";
 
-// Mock employees
-const mockEmployees = [
-  { id: 1, name: "Nguyễn Văn A" },
-  { id: 2, name: "Trần Thị B" },
-  { id: 3, name: "Phạm Văn C" },
-];
+type Employee = {
+  id: number;
+  full_name: string;
+};
 
-// Mock timesheets
-const mockTimesheets = [
-  {
-    id: 1,
-    employee_id: 1,
-    date: "2025-02-01",
-    check_in: "08:00",
-    check_out: "17:00",
-    hours: 8,
-  },
-  {
-    id: 2,
-    employee_id: 1,
-    date: "2025-02-02",
-    check_in: "08:30",
-    check_out: "17:15",
-    hours: 7.5,
-  },
-  {
-    id: 3,
-    employee_id: 2,
-    date: "2025-02-01",
-    check_in: "09:00",
-    check_out: "18:00",
-    hours: 8,
-  },
-];
+type Timesheet = {
+  id: number;
+  employee_id: number;
+  date: string;
+  check_in?: string | null;
+  check_out?: string | null;
+  working_hours?: number | string | null;
+};
 
 const TimesheetEdit: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [form, setForm] = useState({
@@ -48,67 +29,99 @@ const TimesheetEdit: React.FC = () => {
     date: "",
     check_in: "",
     check_out: "",
-    hours: 0,
+    working_hours: 0,
   });
 
-  // Tính số giờ làm
+  // 🔥 Hàm lấy giờ hiện tại
+  const getNowTime = () => {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+  };
+
+  // 🔥 Tính số giờ làm
   const calculateHours = (start: string, end: string) => {
     if (!start || !end) return 0;
 
     const s = new Date(`2020-01-01T${start}`);
     const e = new Date(`2020-01-01T${end}`);
 
-    const diffMs = e.getTime() - s.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
-
-    return diffHours > 0 ? Number(diffHours.toFixed(2)) : 0;
+    const diff = (e.getTime() - s.getTime()) / (1000 * 60 * 60);
+    return diff > 0 ? Number(diff.toFixed(2)) : 0;
   };
 
-  // Load Timesheet theo ID
+  // 🎯 Load timesheet + employee list từ backend
   useEffect(() => {
-    const ts = mockTimesheets.find((t) => t.id === Number(id));
+    const fetchData = async () => {
+      try {
+        const employeesData = await apiGet<Employee[]>("/employees");
+        setEmployees(employeesData);
 
-    if (ts) {
-      setForm({
-        employee_id: String(ts.employee_id),
-        date: ts.date,
-        check_in: ts.check_in,
-        check_out: ts.check_out,
-        hours: ts.hours,
-      });
-    }
-    setLoading(false);
+        const ts = await apiGet<Timesheet>(`/timesheets/${id}`);
+
+        setForm({
+          employee_id: String(ts.employee_id),
+          date: ts.date,
+          check_in: ts.check_in || "",
+          check_out: ts.check_out || "",
+          working_hours: ts.working_hours ? Number(ts.working_hours) : 0,
+        });
+      } catch (err) {
+        console.error(err);
+        alert("Không thể tải dữ liệu chấm công.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [id]);
 
-  // Tự động tính lại số giờ khi thay đổi giờ
+  // 🎯 Tự tính lại số giờ khi sửa check_in / check_out
   useEffect(() => {
     const hours = calculateHours(form.check_in, form.check_out);
-    setForm((prev) => ({ ...prev, hours }));
+    setForm((prev) => ({ ...prev, working_hours: hours }));
   }, [form.check_in, form.check_out]);
 
+  // 🎯 Auto-update form fields
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // 🔥 Gửi API cập nhật timesheet
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log("Updated timesheet:", form);
-    alert("Chấm công đã được cập nhật (mock). API chưa kết nối.");
-    navigate("/timesheets");
+    const payload = {
+      employee_id: Number(form.employee_id),
+      date: form.date,
+      check_in: form.check_in || null,
+      check_out: form.check_out || null,
+      working_hours: form.working_hours,
+    };
+
+    try {
+      await apiPut(`/timesheets/${id}`, payload);
+
+      alert("Cập nhật chấm công thành công!");
+      navigate("/timesheets");
+    } catch (err) {
+      console.error(err);
+      alert("Không thể cập nhật chấm công.");
+    }
   };
 
-  if (loading) return <p>Đang tải dữ liệu...</p>;
+  if (loading) return <p className="m-3">Đang tải dữ liệu...</p>;
 
   return (
     <div className="container-fluid">
       <h3 className="fw-bold mb-4">Chỉnh sửa chấm công</h3>
 
       <form onSubmit={handleSubmit} className="card p-4 shadow-sm border-0">
-
-        {/* Employee select */}
+        {/* EMPLOYEE */}
         <div className="mb-3">
           <label className="form-label fw-bold">Nhân viên</label>
           <select
@@ -118,15 +131,16 @@ const TimesheetEdit: React.FC = () => {
             onChange={handleChange}
             required
           >
-            {mockEmployees.map((e) => (
+            <option value="">-- Chọn nhân viên --</option>
+            {employees.map((e) => (
               <option key={e.id} value={e.id}>
-                {e.name}
+                {e.full_name}
               </option>
             ))}
           </select>
         </div>
 
-        {/* Date */}
+        {/* DATE */}
         <div className="mb-3">
           <label className="form-label fw-bold">Ngày</label>
           <input
@@ -139,45 +153,69 @@ const TimesheetEdit: React.FC = () => {
           />
         </div>
 
-        {/* Check-in / Check-out */}
+        {/* TIME INPUTS */}
         <div className="row g-3">
+          {/* CHECK-IN */}
           <div className="col-md-6">
             <label className="form-label fw-bold">Giờ check-in</label>
-            <input
-              type="time"
-              className="form-control"
-              name="check_in"
-              value={form.check_in}
-              onChange={handleChange}
-              required
-            />
+            <div className="input-group">
+              <input
+                type="time"
+                className="form-control"
+                name="check_in"
+                value={form.check_in}
+                onChange={handleChange}
+              />
+
+              <button
+                type="button"
+                className="btn btn-outline-primary"
+                onClick={() =>
+                  setForm((prev) => ({ ...prev, check_in: getNowTime() }))
+                }
+              >
+                Hiện tại
+              </button>
+            </div>
           </div>
 
+          {/* CHECK-OUT */}
           <div className="col-md-6">
             <label className="form-label fw-bold">Giờ check-out</label>
-            <input
-              type="time"
-              className="form-control"
-              name="check_out"
-              value={form.check_out}
-              onChange={handleChange}
-              required
-            />
+            <div className="input-group">
+              <input
+                type="time"
+                className="form-control"
+                name="check_out"
+                value={form.check_out}
+                onChange={handleChange}
+              />
+
+              <button
+                type="button"
+                className="btn btn-outline-primary"
+                onClick={() =>
+                  setForm((prev) => ({ ...prev, check_out: getNowTime() }))
+                }
+              >
+                Hiện tại
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Hours */}
+        {/* HOURS */}
         <div className="mt-3">
           <label className="form-label fw-bold">Số giờ làm</label>
           <input
             type="number"
             className="form-control"
-            value={form.hours}
+            value={form.working_hours}
             readOnly
           />
         </div>
 
-        {/* Buttons */}
+        {/* BUTTONS */}
         <div className="mt-4 d-flex gap-3">
           <button type="submit" className="btn btn-primary px-4">
             Cập nhật
@@ -191,7 +229,6 @@ const TimesheetEdit: React.FC = () => {
             Hủy
           </button>
         </div>
-
       </form>
     </div>
   );

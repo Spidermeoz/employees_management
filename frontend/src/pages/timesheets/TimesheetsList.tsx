@@ -1,63 +1,108 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { useNavigate } from "react-router-dom";
+import { apiGet } from "../../api/client";
 
-// MOCK EMPLOYEES
-const mockEmployees = [
-  { id: 1, name: "Nguyễn Văn A" },
-  { id: 2, name: "Trần Thị B" },
-  { id: 3, name: "Phạm Văn C" },
-];
+type Employee = {
+  id: number;
+  full_name: string;
+};
 
-// MOCK TIMESHEETS
-const mockTimesheets = [
-  {
-    id: 1,
-    employee_id: 1,
-    date: "2025-02-01",
-    check_in: "08:00",
-    check_out: "17:00",
-    hours: 8,
-  },
-  {
-    id: 2,
-    employee_id: 1,
-    date: "2025-02-02",
-    check_in: "08:30",
-    check_out: "17:15",
-    hours: 7.5,
-  },
-  {
-    id: 3,
-    employee_id: 2,
-    date: "2025-02-01",
-    check_in: "09:00",
-    check_out: "18:00",
-    hours: 8,
-  },
-];
+type Timesheet = {
+  id: number;
+  employee_id: number;
+  date: string;
+  check_in?: string | null;
+  check_out?: string | null;
+  working_hours?: number | string | null;
+};
+
+// 📌 Lấy tháng hiện tại dạng YYYY-MM
+const getCurrentMonth = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+};
+
+// 📌 Lấy ngày hiện tại dạng YYYY-MM-DD
+const getToday = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(now.getDate()).padStart(2, "0")}`;
+};
 
 const TimesheetsList: React.FC = () => {
   const navigate = useNavigate();
 
-  const [employeeFilter, setEmployeeFilter] = useState("");
-  const [monthFilter, setMonthFilter] = useState("2025-02");
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [timesheets, setTimesheets] = useState<Timesheet[]>([]);
 
-  // FILTER LOGIC
-  const filtered = mockTimesheets.filter((t) => {
+  const [employeeFilter, setEmployeeFilter] = useState("");
+  const [monthFilter, setMonthFilter] = useState(getCurrentMonth()); // mặc định tháng này
+  const [dateFilter, setDateFilter] = useState(getToday()); // mặc định hôm nay
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 🔥 Load employees + timesheets từ backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [empData, tsData] = await Promise.all([
+          apiGet<Employee[]>("/employees"),
+          apiGet<Timesheet[]>("/timesheets"),
+        ]);
+
+        // Convert Decimal → number
+        const cleaned = tsData.map((t) => ({
+          ...t,
+          working_hours:
+            t.working_hours === null || t.working_hours === undefined
+              ? null
+              : Number(t.working_hours),
+        }));
+
+        setEmployees(empData);
+        setTimesheets(cleaned);
+      } catch (err) {
+        console.error("FETCH ERROR:", err);
+        setError("Không thể tải dữ liệu chấm công.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) return <p className="m-3">Đang tải dữ liệu...</p>;
+  if (error) return <div className="alert alert-danger m-3">{error}</div>;
+
+  // Lấy tên nhân viên theo ID
+  const getEmployeeName = (id: number) => {
+    const emp = employees.find((e) => e.id === id);
+    return emp ? emp.full_name : "Không xác định";
+  };
+
+  // 🔍 FILTER DATA
+  const filtered = timesheets.filter((t) => {
     const matchEmployee = employeeFilter
       ? t.employee_id === Number(employeeFilter)
       : true;
 
-    const matchMonth = t.date.startsWith(monthFilter);
+    const matchMonth = monthFilter ? t.date.startsWith(monthFilter) : true;
 
-    return matchEmployee && matchMonth;
+    const matchDate = dateFilter ? t.date === dateFilter : true;
+
+    // Nếu có chọn date → ưu tiên lọc theo ngày
+    const finalMatch =
+      (dateFilter ? matchDate : true) &&
+      (monthFilter ? matchMonth : true) &&
+      matchEmployee;
+
+    return finalMatch;
   });
-
-  const getEmployeeName = (id: number) => {
-    const emp = mockEmployees.find((e) => e.id === id);
-    return emp ? emp.name : "Không xác định";
-  };
 
   return (
     <div className="container-fluid">
@@ -66,9 +111,8 @@ const TimesheetsList: React.FC = () => {
       {/* FILTERS */}
       <div className="card p-3 shadow-sm border-0 mb-4">
         <div className="row g-3 align-items-center">
-
           {/* EMPLOYEE FILTER */}
-          <div className="col-md-4">
+          <div className="col-md-3">
             <label className="form-label fw-bold">Nhân viên</label>
             <select
               className="form-select"
@@ -76,16 +120,16 @@ const TimesheetsList: React.FC = () => {
               onChange={(e) => setEmployeeFilter(e.target.value)}
             >
               <option value="">-- Tất cả --</option>
-              {mockEmployees.map((emp) => (
+              {employees.map((emp) => (
                 <option key={emp.id} value={emp.id}>
-                  {emp.name}
+                  {emp.full_name}
                 </option>
               ))}
             </select>
           </div>
 
           {/* MONTH FILTER */}
-          <div className="col-md-4">
+          <div className="col-md-3">
             <label className="form-label fw-bold">Tháng</label>
             <input
               type="month"
@@ -95,8 +139,19 @@ const TimesheetsList: React.FC = () => {
             />
           </div>
 
+          {/* DAY FILTER */}
+          <div className="col-md-3">
+            <label className="form-label fw-bold">Ngày</label>
+            <input
+              type="date"
+              className="form-control"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+            />
+          </div>
+
           {/* ADD BUTTON */}
-          <div className="col-md-4 d-flex align-items-end justify-content-end">
+          <div className="col-md-3 d-flex align-items-end justify-content-end">
             <button
               className="btn btn-primary"
               onClick={() => navigate("/timesheets/create")}
@@ -104,7 +159,6 @@ const TimesheetsList: React.FC = () => {
               ➕ Thêm chấm công
             </button>
           </div>
-
         </div>
       </div>
 
@@ -128,9 +182,10 @@ const TimesheetsList: React.FC = () => {
                 <tr key={t.id}>
                   <td>{getEmployeeName(t.employee_id)}</td>
                   <td>{t.date}</td>
-                  <td>{t.check_in}</td>
-                  <td>{t.check_out}</td>
-                  <td>{t.hours}</td>
+                  <td>{t.check_in || "—"}</td>
+                  <td>{t.check_out || "—"}</td>
+                  <td>{t.working_hours ?? "—"}</td>
+
                   <td>
                     <button
                       className="btn btn-sm btn-info me-2"
@@ -141,30 +196,25 @@ const TimesheetsList: React.FC = () => {
 
                     <button
                       className="btn btn-sm btn-warning me-2"
-                      onClick={() =>
-                        navigate(`/timesheets/${t.id}/edit`)
-                      }
+                      onClick={() => navigate(`/timesheets/${t.id}/edit`)}
                     >
                       ✏ Sửa
                     </button>
 
-                    <button className="btn btn-sm btn-danger">
-                      🗑 Xóa
-                    </button>
+                    <button className="btn btn-sm btn-danger">🗑 Xóa</button>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
                 <td colSpan={6} className="text-center py-3 text-muted">
-                  Không có dữ liệu chấm công.
+                  Không có dữ liệu chấm công phù hợp.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-
     </div>
   );
 };
