@@ -1,69 +1,76 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { apiGet } from "../../api/client";
 
-// MOCK EMPLOYEES
-const mockEmployees = [
-  { id: 1, name: "Nguyễn Văn A" },
-  { id: 2, name: "Trần Thị B" },
-  { id: 3, name: "Phạm Văn C" },
-];
-
-// MOCK CONTRACTS
-const mockContracts = [
-  {
-    id: 1,
-    employee_id: 1,
-    type: "HĐ Lao động 1 năm",
-    start_date: "2023-01-01",
-    end_date: "2024-01-01",
-    note: "Gia hạn sau 1 năm",
-    file_url: "contract1.pdf",
-  },
-  {
-    id: 2,
-    employee_id: 2,
-    type: "HĐ không thời hạn",
-    start_date: "2022-05-15",
-    end_date: "2025-05-15",
-    note: "",
-    file_url: "contract2.pdf",
-  },
-];
+// Kiểu dữ liệu hợp đồng từ backend
+type Contract = {
+  id: number;
+  contract_type: string;
+  start_date: string;
+  end_date?: string | null;
+  note?: string | null;
+  file_url?: string | null;
+  employee: {
+    id: number;
+    full_name: string;
+  };
+};
 
 const ContractDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [contract, setContract] = useState<any>(null);
-  const [employeeName, setEmployeeName] = useState("");
+  const [contract, setContract] = useState<Contract | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // Load contract từ backend
   useEffect(() => {
-    const c = mockContracts.find((c) => c.id === Number(id));
-    if (c) {
-      setContract(c);
-      const emp = mockEmployees.find((e) => e.id === c.employee_id);
-      setEmployeeName(emp ? emp.name : "Không xác định");
-    }
+    const fetchContract = async () => {
+      try {
+        const data = await apiGet<Contract>(`/contracts/${id}`);
+        setContract(data);
+      } catch (err) {
+        console.error(err);
+        setError("Không thể tải thông tin hợp đồng.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchContract();
   }, [id]);
 
-  if (!contract) return <p>Đang tải dữ liệu...</p>;
+  if (loading) return <p className="m-3">Đang tải dữ liệu...</p>;
+  if (error) return <div className="alert alert-danger m-3">{error}</div>;
+  if (!contract) return <p className="m-3">Không tìm thấy hợp đồng.</p>;
 
-  const isExpired = new Date(contract.end_date) < new Date();
+  const isExpired =
+    contract.end_date && new Date(contract.end_date) < new Date();
+
+  const fileUrl = contract.file_url || "";
+
+  // Xác định loại file
+  const extension = fileUrl.split(".").pop()?.toLowerCase();
+
+  const isPDF = extension === "pdf";
+  const isImage = ["jpg", "jpeg", "png", "gif", "webp"].includes(
+    extension || ""
+  );
+  const isDoc = ["doc", "docx", "xlsx", "xls", "ppt", "pptx"].includes(
+    extension || ""
+  );
 
   return (
     <div className="container-fluid">
       <h3 className="fw-bold mb-4">Chi tiết hợp đồng</h3>
 
-      {/* CONTRACT CARD */}
       <div className="card p-4 shadow-sm border-0 mb-4">
-
-        <h4 className="fw-bold">
-          Hợp đồng của: {employeeName}
-        </h4>
+        <h4 className="fw-bold">Hợp đồng của: {contract.employee.full_name}</h4>
 
         <p>
-          <strong>Loại hợp đồng:</strong> {contract.type}
+          <strong>Loại hợp đồng:</strong> {contract.contract_type}
         </p>
 
         <p>
@@ -71,26 +78,80 @@ const ContractDetail: React.FC = () => {
         </p>
 
         <p>
-          <strong>Ngày kết thúc:</strong>{" "}
-          <span className="fw-bold">{contract.end_date}</span>{" "}
-          {isExpired ? (
-            <span className="badge bg-danger ms-2">Hết hạn</span>
-          ) : (
-            <span className="badge bg-success ms-2">Còn hiệu lực</span>
-          )}
+          <strong>Ngày kết thúc:</strong> {contract.end_date || "—"}{" "}
+          {contract.end_date &&
+            (isExpired ? (
+              <span className="badge bg-danger ms-2">Hết hạn</span>
+            ) : (
+              <span className="badge bg-success ms-2">Còn hiệu lực</span>
+            ))}
         </p>
 
-        {/* FILE LINK */}
-        <p>
-          <strong>File hợp đồng:</strong>{" "}
-          <a href={contract.file_url} target="_blank" rel="noreferrer">
-            📄 Xem file
-          </a>
-        </p>
+        {/* FILE PREVIEW */}
+        <div className="preview-section mt-4">
+          <strong>File hợp đồng:</strong>
+
+          {!fileUrl ? (
+            <p className="text-muted">Chưa có file hợp đồng</p>
+          ) : (
+            <>
+              <div
+                className="border rounded p-3 mt-2"
+                style={{ background: "#fafafa" }}
+              >
+                {isPDF && (
+                  <embed
+                    src={fileUrl}
+                    type="application/pdf"
+                    width="100%"
+                    height="550px"
+                  />
+                )}
+
+                {isImage && (
+                  <img
+                    src={fileUrl}
+                    alt="Contract File"
+                    className="img-fluid rounded"
+                  />
+                )}
+
+                {isDoc && (
+                  <iframe
+                    src={`https://docs.google.com/viewer?url=${encodeURIComponent(
+                      fileUrl
+                    )}&embedded=true`}
+                    width="100%"
+                    height="550px"
+                    style={{ border: "none" }}
+                  />
+                )}
+
+                {!isPDF && !isImage && !isDoc && (
+                  <p className="text-muted">
+                    Không thể preview loại file này. <br />
+                    <a href={fileUrl} target="_blank" rel="noreferrer">
+                      📄 Tải xuống / mở file
+                    </a>
+                  </p>
+                )}
+              </div>
+
+              {/* Nút download */}
+              <a
+                href={fileUrl}
+                download
+                className="btn btn-outline-primary mt-3"
+              >
+                ⬇ Tải file hợp đồng
+              </a>
+            </>
+          )}
+        </div>
 
         {/* NOTE */}
         {contract.note && (
-          <p>
+          <p className="mt-3">
             <strong>Ghi chú:</strong> {contract.note}
           </p>
         )}
@@ -111,7 +172,6 @@ const ContractDetail: React.FC = () => {
             ↩ Quay lại
           </button>
         </div>
-
       </div>
     </div>
   );

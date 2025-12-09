@@ -1,25 +1,69 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { useNavigate } from "react-router-dom";
+import { apiGet, apiPost } from "../../api/client";
 
-// Mock employees for selection
-const mockEmployees = [
-  { id: 1, name: "Nguyễn Văn A" },
-  { id: 2, name: "Trần Thị B" },
-  { id: 3, name: "Phạm Văn C" },
-];
+// Kiểu dữ liệu cho Employee
+type Employee = {
+  id: number;
+  full_name: string;
+};
+
+// Hàm upload file lên Cloudinary
+async function uploadFileToCloudinary(file: File): Promise<string> {
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", uploadPreset);
+
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/upload`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error("Upload file thất bại!");
+  }
+
+  const data = await res.json();
+  return data.secure_url;
+}
 
 const ContractCreate: React.FC = () => {
   const navigate = useNavigate();
 
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [form, setForm] = useState({
     employee_id: "",
-    type: "",
+    contract_type: "",
     start_date: "",
     end_date: "",
-    note: "",
     file: null as File | null,
+    note: "",
   });
+
+  // Lấy danh sách nhân viên thật từ backend
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const data = await apiGet<Employee[]>("/employees");
+        setEmployees(data);
+      } catch {
+        alert("Không thể tải danh sách nhân viên!");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -33,14 +77,41 @@ const ContractCreate: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log("New Contract:", form);
-    alert("Hợp đồng đã được tạo (mock). Chưa kết nối API.");
+    try {
+      let fileUrl: string | null = null;
 
-    navigate("/contracts");
+      // 1️⃣ Upload file hợp đồng lên Cloudinary nếu có
+      if (form.file) {
+        fileUrl = await uploadFileToCloudinary(form.file);
+        console.log("Uploaded contract file URL:", fileUrl);
+      }
+
+      // 2️⃣ Chuẩn bị payload gửi backend
+      const payload = {
+        employee_id: Number(form.employee_id),
+        contract_type: form.contract_type,
+        start_date: form.start_date,
+        end_date: form.end_date || null,
+        file_url: fileUrl,
+        note: form.note || null,
+        salary: 0, // nếu backend yêu cầu
+      };
+
+      // 3️⃣ Gửi API thật đến backend
+      await apiPost("/contracts", payload);
+
+      alert("Tạo hợp đồng thành công!");
+      navigate("/contracts");
+    } catch (err) {
+      console.error(err);
+      alert("Không thể tạo hợp đồng!");
+    }
   };
+
+  if (loading) return <p className="m-3">Đang tải danh sách nhân viên...</p>;
 
   return (
     <div className="container-fluid">
@@ -59,9 +130,9 @@ const ContractCreate: React.FC = () => {
             required
           >
             <option value="">-- Chọn nhân viên --</option>
-            {mockEmployees.map((e) => (
+            {employees.map((e) => (
               <option key={e.id} value={e.id}>
-                {e.name}
+                {e.full_name}
               </option>
             ))}
           </select>
@@ -73,8 +144,8 @@ const ContractCreate: React.FC = () => {
           <input
             type="text"
             className="form-control"
-            name="type"
-            value={form.type}
+            name="contract_type"
+            value={form.contract_type}
             onChange={handleChange}
             placeholder="Ví dụ: HĐ Lao động 1 năm"
             required
@@ -103,7 +174,6 @@ const ContractCreate: React.FC = () => {
               name="end_date"
               value={form.end_date}
               onChange={handleChange}
-              required
             />
           </div>
         </div>
@@ -112,6 +182,7 @@ const ContractCreate: React.FC = () => {
         <div className="mt-3">
           <label className="form-label fw-bold">File hợp đồng</label>
           <input type="file" className="form-control" onChange={handleFileChange} />
+
           {form.file && (
             <p className="mt-2 text-muted">Đã chọn: {form.file.name}</p>
           )}
@@ -143,7 +214,6 @@ const ContractCreate: React.FC = () => {
             Hủy
           </button>
         </div>
-
       </form>
     </div>
   );

@@ -1,13 +1,12 @@
 from datetime import datetime
 from typing import List, Optional
 
+from app.auth.jwt_bearer import JWTBearer
 from app.database import get_db
 from app.models.labor_contracts import LaborContract
 from app.schemas.contracts import ContractCreate, ContractResponse, ContractUpdate
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-
-from app.auth.jwt_bearer import JWTBearer
+from sqlalchemy.orm import Session, joinedload
 
 router = APIRouter(
     prefix="/contracts",
@@ -17,11 +16,8 @@ router = APIRouter(
 
 
 @router.get("/", response_model=List[ContractResponse])
-def list_contracts(
-    db: Session = Depends(get_db),
-    employee_id: Optional[int] = None,
-):
-    query = db.query(LaborContract)
+def list_contracts(db: Session = Depends(get_db), employee_id: Optional[int] = None):
+    query = db.query(LaborContract).options(joinedload(LaborContract.employee))
 
     if employee_id:
         query = query.filter(LaborContract.employee_id == employee_id)

@@ -17,6 +17,14 @@ class ContractCreate(ContractBase):
     pass
 
 
+class EmployeeSmall(BaseModel):
+    id: int
+    full_name: str
+
+    class Config:
+        orm_mode = True
+
+
 class ContractUpdate(BaseModel):
     contract_type: Optional[str]
     salary: Optional[Decimal]
@@ -27,6 +35,7 @@ class ContractUpdate(BaseModel):
 
 class ContractResponse(ContractBase):
     id: int
+    employee: Optional[EmployeeSmall]
 
     class Config:
         orm_mode = True
