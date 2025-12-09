@@ -2,64 +2,79 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 
-// MOCK DEPARTMENTS
-const mockDepartments = [
-  {
-    id: 1,
-    name: "Phòng Kế Toán",
-    description: "Xử lý sổ sách và báo cáo tài chính",
-    manager_id: 1,
-    phone: "0901112222",
-  },
-  {
-    id: 2,
-    name: "Phòng Nhân Sự",
-    description: "Quản lý nhân lực và tuyển dụng",
-    manager_id: 2,
-    phone: "0903334444",
-  },
-  {
-    id: 3,
-    name: "Phòng IT",
-    description: "Phát triển phần mềm và quản lý hệ thống",
-    manager_id: 3,
-    phone: "0905556666",
-  },
-];
+import { apiGet } from "../../api/client";
 
-// MOCK EMPLOYEES
-const mockEmployees = [
-  { id: 1, code: "NV001", name: "Nguyễn Văn A", department_id: 1, position: "Kế toán viên", status: "active" },
-  { id: 2, code: "NV002", name: "Trần Thị B", department_id: 2, position: "HR Executive", status: "active" },
-  { id: 3, code: "NV003", name: "Phạm Văn C", department_id: 3, position: "Developer", status: "active" },
-  { id: 4, code: "NV004", name: "Lê Thị D", department_id: 3, position: "Tester", status: "inactive" },
-];
+// Kiểu dữ liệu đồng bộ với backend
+type Department = {
+  id: number;
+  name: string;
+  description?: string | null;
+  phone?: string | null;
+  manager_id?: number | null;
+};
+
+type Employee = {
+  id: number;
+  code: string;
+  full_name: string;
+  position_id?: number | null;
+  status: string;
+};
 
 const DepartmentDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [department, setDepartment] = useState<any>(null);
-  const [employees, setEmployees] = useState<any[]>([]);
+  const [department, setDepartment] = useState<Department | null>(null);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [managerName, setManagerName] = useState<string>("");
 
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  // 🔥 Load dữ liệu phòng ban + trưởng phòng + nhân viên
   useEffect(() => {
-    const dept = mockDepartments.find((d) => d.id === Number(id));
+    const loadData = async () => {
+      try {
+        if (!id) return;
 
-    if (dept) {
-      setDepartment(dept);
+        // 1️⃣ Lấy thông tin phòng ban
+        const dept = await apiGet<Department>(`/departments/${id}`);
+        setDepartment(dept);
 
-      // Find manager name
-      const manager = mockEmployees.find((e) => e.id === dept.manager_id);
-      setManagerName(manager ? manager.name : "Chưa chọn");
+        // 2️⃣ Lấy tên Trưởng phòng (nếu có)
+        if (dept.manager_id) {
+          try {
+            const manager = await apiGet<Employee>(
+              `/employees/${dept.manager_id}`
+            );
+            setManagerName(manager.full_name);
+          } catch {
+            setManagerName("Không tìm thấy");
+          }
+        } else {
+          setManagerName("Chưa chọn");
+        }
 
-      // Employees in this department
-      const empList = mockEmployees.filter((e) => e.department_id === dept.id);
-      setEmployees(empList);
-    }
+        // 3️⃣ Lấy danh sách nhân viên thuộc phòng
+        const empList = await apiGet<Employee[]>(
+          `/employees?department_id=${dept.id}`
+        );
+        setEmployees(empList);
+      } catch (error: any) {
+        console.error("Lỗi load dữ liệu:", error);
+        setErr("Không thể tải thông tin phòng ban.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, [id]);
 
-  if (!department) return <p>Đang tải dữ liệu...</p>;
+  if (loading) return <p className="m-3">Đang tải dữ liệu...</p>;
+  if (err) return <div className="alert alert-danger m-3">{err}</div>;
+  if (!department) return <p className="m-3">Không tìm thấy phòng ban.</p>;
 
   return (
     <div className="container-fluid">
@@ -69,9 +84,15 @@ const DepartmentDetail: React.FC = () => {
       <div className="card p-4 shadow-sm border-0 mb-4">
         <h4 className="fw-bold mb-2">{department.name}</h4>
 
-        <p><strong>Mô tả:</strong> {department.description}</p>
-        <p><strong>Trưởng phòng:</strong> {managerName}</p>
-        <p><strong>Số điện thoại:</strong> {department.phone}</p>
+        <p>
+          <strong>Mô tả:</strong> {department.description || "—"}
+        </p>
+        <p>
+          <strong>Trưởng phòng:</strong> {managerName}
+        </p>
+        <p>
+          <strong>Số điện thoại:</strong> {department.phone || "—"}
+        </p>
 
         <div className="mt-3 d-flex gap-3">
           <button
@@ -80,7 +101,11 @@ const DepartmentDetail: React.FC = () => {
           >
             ✏ Sửa phòng ban
           </button>
-          <button className="btn btn-secondary" onClick={() => navigate("/departments")}>
+
+          <button
+            className="btn btn-secondary"
+            onClick={() => navigate("/departments")}
+          >
             ↩ Quay lại
           </button>
         </div>
@@ -95,7 +120,7 @@ const DepartmentDetail: React.FC = () => {
             <tr>
               <th>Mã NV</th>
               <th>Tên</th>
-              <th>Chức vụ</th>
+              <th>Chức vụ (ID)</th>
               <th>Trạng thái</th>
               <th style={{ width: "150px" }}>Hành động</th>
             </tr>
@@ -106,8 +131,8 @@ const DepartmentDetail: React.FC = () => {
               employees.map((emp) => (
                 <tr key={emp.id}>
                   <td>{emp.code}</td>
-                  <td>{emp.name}</td>
-                  <td>{emp.position}</td>
+                  <td>{emp.full_name}</td>
+                  <td>{emp.position_id || "—"}</td>
                   <td>
                     <span
                       className={

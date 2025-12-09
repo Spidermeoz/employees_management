@@ -1,39 +1,50 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { apiGet } from "../../api/client";
 
-// MOCK DATA
-const mockDepartments = [
-  {
-    id: 1,
-    name: "Phòng Kế Toán",
-    description: "Xử lý sổ sách và báo cáo tài chính",
-    manager: "Nguyễn Văn A",
-    phone: "0901112222",
-  },
-  {
-    id: 2,
-    name: "Phòng Nhân Sự",
-    description: "Quản lý nhân lực và tuyển dụng",
-    manager: "Trần Thị B",
-    phone: "0903334444",
-  },
-  {
-    id: 3,
-    name: "Phòng IT",
-    description: "Phát triển phần mềm và quản lý hệ thống",
-    manager: "Phạm Văn C",
-    phone: "0905556666",
-  },
-];
+// Kiểu dữ liệu theo DepartmentResponse (schemas)
+type Department = {
+  id: number;
+  name: string;
+  description?: string | null;
+  phone?: string | null;
+  manager_id?: number | null;
+};
 
 const DepartmentsList: React.FC = () => {
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
 
-  const filtered = mockDepartments.filter((d) =>
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 🔥 Load dữ liệu từ backend
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const data = await apiGet<Department[]>("/departments");
+        setDepartments(data);
+      } catch (err: any) {
+        console.error("Lỗi load phòng ban:", err);
+        setError("Không thể tải danh sách phòng ban.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDepartments();
+  }, []);
+
+  // 🔎 Filter theo search
+  const filtered = departments.filter((d) =>
     d.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  if (loading) return <p className="m-3">Đang tải dữ liệu...</p>;
+
+  if (error) return <div className="alert alert-danger m-3">{error}</div>;
 
   return (
     <div className="container-fluid">
@@ -64,7 +75,7 @@ const DepartmentsList: React.FC = () => {
             <tr>
               <th>Tên phòng</th>
               <th>Mô tả</th>
-              <th>Trưởng phòng</th>
+              <th>Trưởng phòng (ID)</th>
               <th>SĐT</th>
               <th style={{ width: "160px" }}>Hành động</th>
             </tr>
@@ -74,9 +85,9 @@ const DepartmentsList: React.FC = () => {
             {filtered.map((d) => (
               <tr key={d.id}>
                 <td>{d.name}</td>
-                <td>{d.description}</td>
-                <td>{d.manager}</td>
-                <td>{d.phone}</td>
+                <td>{d.description || "—"}</td>
+                <td>{d.manager_id || "—"}</td>
+                <td>{d.phone || "—"}</td>
 
                 <td>
                   {/* DETAIL */}

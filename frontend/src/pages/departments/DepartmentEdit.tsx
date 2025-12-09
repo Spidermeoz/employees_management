@@ -2,43 +2,28 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 
-// Mock departments
-const mockDepartments = [
-  {
-    id: 1,
-    name: "Phòng Kế Toán",
-    description: "Xử lý sổ sách và báo cáo tài chính",
-    manager_id: 1,
-    phone: "0901112222",
-  },
-  {
-    id: 2,
-    name: "Phòng Nhân Sự",
-    description: "Quản lý nhân lực và tuyển dụng",
-    manager_id: 2,
-    phone: "0903334444",
-  },
-  {
-    id: 3,
-    name: "Phòng IT",
-    description: "Phát triển phần mềm và quản lý hệ thống",
-    manager_id: 3,
-    phone: "0905556666",
-  },
-];
+import { apiGet, apiPut } from "../../api/client";
 
-// Mock employees (for selecting manager)
-const mockEmployees = [
-  { id: 1, name: "Nguyễn Văn A" },
-  { id: 2, name: "Trần Thị B" },
-  { id: 3, name: "Phạm Văn C" },
-];
+type Employee = {
+  id: number;
+  full_name: string;
+};
+
+type Department = {
+  id: number;
+  name: string;
+  description?: string | null;
+  phone?: string | null;
+  manager_id?: number | null;
+};
 
 const DepartmentEdit: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -47,19 +32,33 @@ const DepartmentEdit: React.FC = () => {
     manager_id: "",
   });
 
-  // Load department data
+  // 🔥 Load dữ liệu phòng ban + danh sách nhân viên
   useEffect(() => {
-    const dept = mockDepartments.find((d) => d.id === Number(id));
+    const loadData = async () => {
+      try {
+        if (!id) return;
 
-    if (dept) {
-      setForm({
-        name: dept.name,
-        description: dept.description,
-        phone: dept.phone,
-        manager_id: dept.manager_id.toString(),
-      });
-    }
-    setLoading(false);
+        // 1️⃣ Load phòng ban
+        const dept = await apiGet<Department>(`/departments/${id}`);
+        setForm({
+          name: dept.name,
+          description: dept.description || "",
+          phone: dept.phone || "",
+          manager_id: dept.manager_id ? dept.manager_id.toString() : "",
+        });
+
+        // 2️⃣ Load danh sách nhân viên
+        const emps = await apiGet<Employee[]>("/employees");
+        setEmployees(emps);
+      } catch (err) {
+        console.error(err);
+        setError("Không thể tải dữ liệu phòng ban.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, [id]);
 
   const handleChange = (
@@ -68,16 +67,34 @@ const DepartmentEdit: React.FC = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // 🔥 Gửi lên backend để cập nhật phòng ban
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log("Updated department:", form);
-    alert("Cập nhật phòng ban (mock). API chưa kết nối!");
+    try {
+      await apiPut(`/departments/${id}`, {
+        name: form.name,
+        description: form.description,
+        phone: form.phone,
+        manager_id: form.manager_id ? Number(form.manager_id) : null,
+      });
 
-    navigate("/departments");
+      alert("Cập nhật phòng ban thành công!");
+      navigate("/departments");
+    } catch (err: any) {
+      console.error(err);
+      alert("Lỗi cập nhật phòng ban: " + err.message);
+    }
   };
 
-  if (loading) return <p>Đang tải dữ liệu...</p>;
+  if (loading) return <p className="m-3">Đang tải dữ liệu...</p>;
+
+  if (error)
+    return (
+      <div className="alert alert-danger m-3">
+        {error}
+      </div>
+    );
 
   return (
     <div className="container-fluid">
@@ -132,9 +149,10 @@ const DepartmentEdit: React.FC = () => {
             onChange={handleChange}
           >
             <option value="">-- Chọn trưởng phòng --</option>
-            {mockEmployees.map((emp) => (
+
+            {employees.map((emp) => (
               <option key={emp.id} value={emp.id}>
-                {emp.name}
+                {emp.full_name}
               </option>
             ))}
           </select>

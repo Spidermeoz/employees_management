@@ -1,16 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { apiGet, apiPost } from "../../api/client";
 
-// Mock employee list for selecting "Trưởng phòng"
-const mockEmployees = [
-  { id: 1, name: "Nguyễn Văn A" },
-  { id: 2, name: "Trần Thị B" },
-  { id: 3, name: "Phạm Văn C" },
-];
+type EmployeeOption = {
+  id: number;
+  full_name: string;
+};
 
 const DepartmentCreate: React.FC = () => {
   const navigate = useNavigate();
+
+  const [employees, setEmployees] = useState<EmployeeOption[]>([]);
+  const [loadingEmp, setLoadingEmp] = useState(true);
+  const [errorEmp, setErrorEmp] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -19,26 +22,54 @@ const DepartmentCreate: React.FC = () => {
     manager_id: "",
   });
 
+  // 🔥 1) Load danh sách nhân viên
+  useEffect(() => {
+    apiGet<EmployeeOption[]>("/employees")
+      .then((data) => setEmployees(data))
+      .catch((err) => {
+        console.error("Lỗi khi load danh sách nhân viên:", err);
+        setErrorEmp("Không thể tải danh sách nhân viên.");
+      })
+      .finally(() => setLoadingEmp(false));
+  }, []);
+
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
   ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // 🔥 2) Submit form để tạo phòng ban thật
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log("New Department:", form);
-    alert("Phòng ban đã được tạo (mock). Chưa kết nối API.");
-    navigate("/departments");
+    try {
+      await apiPost("/departments", {
+        name: form.name,
+        description: form.description,
+        phone: form.phone,
+        manager_id: form.manager_id ? Number(form.manager_id) : null,
+      });
+
+      alert("Tạo phòng ban thành công!");
+      navigate("/departments");
+    } catch (err: any) {
+      console.error(err);
+      alert("Lỗi tạo phòng ban: " + err.message);
+    }
   };
+
+  if (loadingEmp) return <p className="m-3">Đang tải danh sách nhân viên...</p>;
+
+  if (errorEmp) return <div className="alert alert-danger m-3">{errorEmp}</div>;
 
   return (
     <div className="container-fluid">
       <h3 className="fw-bold mb-4">Thêm phòng ban</h3>
 
       <form onSubmit={handleSubmit} className="card p-4 shadow-sm border-0">
-
         {/* Tên phòng ban */}
         <div className="mb-3">
           <label className="form-label fw-bold">Tên phòng ban</label>
@@ -86,9 +117,10 @@ const DepartmentCreate: React.FC = () => {
             onChange={handleChange}
           >
             <option value="">-- Chọn trưởng phòng --</option>
-            {mockEmployees.map((emp) => (
+
+            {employees.map((emp) => (
               <option key={emp.id} value={emp.id}>
-                {emp.name}
+                {emp.full_name}
               </option>
             ))}
           </select>

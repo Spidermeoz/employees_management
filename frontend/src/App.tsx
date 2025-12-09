@@ -11,6 +11,7 @@ import EmployeeEdit from "./pages/employees/EmployeeEdit";
 import EmployeeDetail from "./pages/employees/EmployeeDetail";
 
 import DepartmentsList from "./pages/departments/DepartmentsList";
+import DepartmentCreate from "./pages/departments/DepartmentCreate";
 import DepartmentEdit from "./pages/departments/DepartmentEdit";
 import DepartmentDetail from "./pages/departments/DepartmentDetail";
 
@@ -79,6 +80,7 @@ function App() {
 
           {/* Departments */}
           <Route path="departments" element={<DepartmentsList />} />
+          <Route path="departments/create" element={<DepartmentCreate />} />
           <Route path="departments/:id/edit" element={<DepartmentEdit />} />
           <Route path="departments/:id" element={<DepartmentDetail />} />
 
