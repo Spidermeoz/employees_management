@@ -106,6 +106,7 @@ def create_employee(
         salary_grade_id=data.salary_grade_id,
         hire_date=data.hire_date,
         status=data.status or "active",
+        avatar=data.avatar,
     )
 
     db.add(emp)
@@ -141,6 +142,7 @@ def update_employee(
         setattr(emp, field, value)
 
     emp.updated_at = datetime.utcnow()
+    emp.avatar = data.avatar
 
     db.commit()
     db.refresh(emp)

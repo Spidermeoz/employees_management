@@ -9,6 +9,7 @@ type Employee = {
   code: string;
   full_name: string;
   status: string;
+  avatar?: string | null;
   department?: {
     name: string;
   };
@@ -47,8 +48,11 @@ const EmployeeList: React.FC = () => {
   );
 
   if (loading) return <p className="m-3">Đang tải dữ liệu...</p>;
-
   if (error) return <div className="alert alert-danger m-3">{error}</div>;
+
+  // Ảnh mặc định nếu nhân viên chưa có avatar
+  const defaultAvatar =
+    "https://res.cloudinary.com/demo/image/upload/v169110/default_avatar.png";
 
   return (
     <div className="container-fluid">
@@ -77,6 +81,7 @@ const EmployeeList: React.FC = () => {
         <table className="table table-striped mb-0">
           <thead className="table-light">
             <tr>
+              <th>Avatar</th>
               <th>Mã NV</th>
               <th>Tên</th>
               <th>Phòng ban</th>
@@ -89,6 +94,21 @@ const EmployeeList: React.FC = () => {
           <tbody>
             {filtered.map((emp) => (
               <tr key={emp.id}>
+                {/* Avatar */}
+                <td>
+                  <img
+                    src={emp.avatar || defaultAvatar}
+                    alt="avatar"
+                    style={{
+                      width: "45px",
+                      height: "45px",
+                      objectFit: "cover",
+                      borderRadius: "50%",
+                      border: "1px solid #ddd",
+                    }}
+                  />
+                </td>
+
                 <td>{emp.code}</td>
                 <td>{emp.full_name}</td>
 
@@ -132,7 +152,7 @@ const EmployeeList: React.FC = () => {
 
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-center py-3 text-muted">
+                <td colSpan={7} className="text-center py-3 text-muted">
                   Không tìm thấy nhân viên nào.
                 </td>
               </tr>

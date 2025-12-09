@@ -2,11 +2,16 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { apiGet, apiPut } from "../../api/client";
+import { uploadToCloudinary } from "../../utils/uploadCloudinary";
 
 type Department = { id: number; name: string };
 type Position = { id: number; name: string };
 type SalaryGrade = { id: number; grade_name: string };
+
 type Employee = {
+  position: any;
+  salary_grade: any;
+  department: any;
   full_name: string;
   code: string;
   gender: string;
@@ -19,6 +24,7 @@ type Employee = {
   salary_grade_id: number;
   hire_date: string;
   status: string;
+  avatar?: string | null;
 };
 
 const EmployeeEdit: React.FC = () => {
@@ -31,6 +37,8 @@ const EmployeeEdit: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
   const [grades, setGrades] = useState<SalaryGrade[]>([]);
+
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null); // Hiển thị ảnh preview
 
   const [form, setForm] = useState({
     full_name: "",
@@ -45,9 +53,11 @@ const EmployeeEdit: React.FC = () => {
     salary_grade_id: "",
     hire_date: "",
     status: "active",
+    avatar: null as File | null,
+    avatar_url: "" as string,
   });
 
-  // 🔥 Fetch data thật
+  // 🚀 Load dữ liệu nhân viên + dropdown
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -58,7 +68,6 @@ const EmployeeEdit: React.FC = () => {
           apiGet<SalaryGrade[]>("/salary-grades"),
         ]);
 
-        // Fill form bằng dữ liệu từ backend
         setForm({
           full_name: emp.full_name,
           code: emp.code,
@@ -67,15 +76,22 @@ const EmployeeEdit: React.FC = () => {
           email: emp.email || "",
           phone: emp.phone || "",
           address: emp.address || "",
-          department_id: emp.department_id ? String(emp.department_id) : "",
-          position_id: emp.position_id ? String(emp.position_id) : "",
-          salary_grade_id: emp.salary_grade_id
-            ? String(emp.salary_grade_id)
+
+          // FIXED HERE 🔥
+          department_id: emp.department?.id ? String(emp.department.id) : "",
+          position_id: emp.position?.id ? String(emp.position.id) : "",
+          salary_grade_id: emp.salary_grade?.id
+            ? String(emp.salary_grade.id)
             : "",
+
           hire_date: emp.hire_date || "",
           status: emp.status,
+
+          avatar: null,
+          avatar_url: emp.avatar || "",
         });
 
+        setAvatarPreview(emp.avatar || "");
         setDepartments(deps);
         setPositions(pos);
         setGrades(grads);
@@ -90,7 +106,7 @@ const EmployeeEdit: React.FC = () => {
     loadData();
   }, [id]);
 
-  // handle change
+  // handle change text/select inputs
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -99,11 +115,29 @@ const EmployeeEdit: React.FC = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // submit update
+  // 🎨 handle avatar preview
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setForm({ ...form, avatar: file });
+
+      // Preview ảnh
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
+  // 🚀 SUBMIT UPDATE
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
+      let avatarUrl = form.avatar_url;
+
+      // Nếu user chọn avatar mới → upload Cloudinary
+      if (form.avatar) {
+        avatarUrl = await uploadToCloudinary(form.avatar);
+      }
+
       const payload = {
         full_name: form.full_name,
         code: form.code,
@@ -119,11 +153,12 @@ const EmployeeEdit: React.FC = () => {
           : null,
         hire_date: form.hire_date || null,
         status: form.status,
+        avatar: avatarUrl, // 👈 Gửi link Cloudinary lên backend
       };
 
       await apiPut(`/employees/${id}`, payload);
 
-      alert("Cập nhật thành công!");
+      alert("Cập nhật nhân viên thành công!");
       navigate(`/employees/${id}`);
     } catch (err) {
       console.error(err);
@@ -150,6 +185,7 @@ const EmployeeEdit: React.FC = () => {
       <h3 className="fw-bold mb-4">Chỉnh sửa nhân viên</h3>
 
       <form onSubmit={handleSubmit} className="card p-4 shadow-sm border-0">
+        {/* BASIC INFO */}
         <h5 className="fw-bold">Thông tin cơ bản</h5>
 
         <div className="row mt-3 g-3">
@@ -249,6 +285,7 @@ const EmployeeEdit: React.FC = () => {
 
         <hr className="my-4" />
 
+        {/* WORK INFO */}
         <h5 className="fw-bold">Thông tin công việc</h5>
 
         <div className="row mt-3 g-3">
@@ -318,6 +355,32 @@ const EmployeeEdit: React.FC = () => {
           </div>
         </div>
 
+        <hr className="my-4" />
+
+        {/* AVATAR */}
+        <h5 className="fw-bold">Ảnh đại diện</h5>
+
+        <div className="mt-2">
+          <input
+            type="file"
+            className="form-control"
+            onChange={handleAvatarChange}
+          />
+
+          <div className="mt-3">
+            {avatarPreview ? (
+              <img
+                src={avatarPreview}
+                alt="preview"
+                width="140"
+                className="rounded border"
+              />
+            ) : (
+              <p className="text-muted">Chưa có ảnh đại diện.</p>
+            )}
+          </div>
+        </div>
+
         <div className="mt-4 d-flex gap-3">
           <button className="btn btn-primary px-4" type="submit">
             Cập nhật
@@ -328,7 +391,7 @@ const EmployeeEdit: React.FC = () => {
             type="button"
             onClick={() => navigate("/employees")}
           >
-            Huỷ
+            Hủy
           </button>
         </div>
       </form>

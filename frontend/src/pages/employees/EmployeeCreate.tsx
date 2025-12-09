@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate } from "react-router-dom";
 import { apiGet, apiPost } from "../../api/client";
+import { uploadToCloudinary } from "../../utils/uploadCloudinary";
 
 type Department = {
   id: number;
@@ -83,7 +84,14 @@ const EmployeeCreate: React.FC = () => {
     e.preventDefault();
 
     try {
-      // Vì backend chưa có upload avatar → chỉ gửi text fields
+      let avatarUrl = null;
+
+      if (form.avatar) {
+        // Upload ảnh thật lên Cloudinary
+        avatarUrl = await uploadToCloudinary(form.avatar);
+        console.log("Avatar URL:", avatarUrl);
+      }
+
       const payload = {
         code: form.code,
         full_name: form.full_name,
@@ -99,15 +107,16 @@ const EmployeeCreate: React.FC = () => {
           : null,
         hire_date: form.hire_date || null,
         status: form.status,
+        avatar: avatarUrl, // ← Gửi URL về backend
       };
 
       await apiPost("/employees", payload);
 
       alert("Tạo nhân viên thành công!");
       navigate("/employees");
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      alert("Không thể tạo nhân viên!");
+      alert("Lỗi! Không thể tạo nhân viên.");
     }
   };
 

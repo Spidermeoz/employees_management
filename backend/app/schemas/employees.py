@@ -20,11 +20,13 @@ class EmployeeBase(BaseModel):
 
 class EmployeeCreate(EmployeeBase):
     code: str
+    avatar: Optional[str] = None
 
 
 class EmployeeUpdate(EmployeeBase):
     full_name: Optional[str]
     gender: Optional[str]
+    avatar: Optional[str] = None
 
 
 class DepartmentInfo(BaseModel):
@@ -46,7 +48,7 @@ class PositionInfo(BaseModel):
 class SalaryGradeInfo(BaseModel):
     id: int
     grade_name: str
-    
+
     class Config:
         orm_mode = True
 
@@ -60,6 +62,7 @@ class EmployeeResponse(BaseModel):
     email: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
+    avatar: Optional[str] = None
 
     # JOIN INFO
     department: Optional[DepartmentInfo]
