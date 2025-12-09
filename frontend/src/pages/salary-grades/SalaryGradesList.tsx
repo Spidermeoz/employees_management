@@ -1,36 +1,57 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { apiGet } from "../../api/client";
 
-// MOCK DATA
-const mockGrades = [
-  {
-    id: 1,
-    grade_name: "Bậc 1",
-    base_salary: 6000000,
-    coefficient: 1.0,
-  },
-  {
-    id: 2,
-    grade_name: "Bậc 2",
-    base_salary: 7000000,
-    coefficient: 1.2,
-  },
-  {
-    id: 3,
-    grade_name: "Bậc 3",
-    base_salary: 9000000,
-    coefficient: 1.5,
-  },
-];
+// Kiểu dữ liệu đúng theo SalaryGradeResponse schema
+type SalaryGrade = {
+  id: number;
+  grade_name: string;
+  base_salary: number; // hoặc Decimal -> backend trả về string, FE convert
+  coefficient: number;
+};
 
 const SalaryGradesList: React.FC = () => {
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
 
-  const filtered = mockGrades.filter((g) =>
+  const [grades, setGrades] = useState<SalaryGrade[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 🔥 Load dữ liệu thật từ backend
+  useEffect(() => {
+    const fetchGrades = async () => {
+      try {
+        const data = await apiGet<SalaryGrade[]>("/salary-grades");
+
+        // Nếu backend trả DECIMAL dưới dạng string (thường gặp)
+        const normalized = data.map((g: any) => ({
+          ...g,
+          base_salary: Number(g.base_salary),
+          coefficient: Number(g.coefficient),
+        }));
+
+        setGrades(normalized);
+      } catch (err) {
+        console.error("Error loading salary grades:", err);
+        setError("Không thể tải danh sách bậc lương");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGrades();
+  }, []);
+
+  // Bộ lọc search
+  const filtered = grades.filter((g) =>
     g.grade_name.toLowerCase().includes(search.toLowerCase())
   );
+
+  if (loading) return <p className="m-3">Đang tải dữ liệu...</p>;
+
+  if (error) return <div className="alert alert-danger m-3">{error}</div>;
 
   return (
     <div className="container-fluid">
@@ -76,6 +97,7 @@ const SalaryGradesList: React.FC = () => {
                 </td>
 
                 <td>
+                  {/* DETAIL */}
                   <button
                     className="btn btn-sm btn-info me-2"
                     onClick={() => navigate(`/salary-grades/${g.id}`)}
@@ -83,6 +105,7 @@ const SalaryGradesList: React.FC = () => {
                     👁 Xem
                   </button>
 
+                  {/* EDIT */}
                   <button
                     className="btn btn-sm btn-warning me-2"
                     onClick={() => navigate(`/salary-grades/${g.id}/edit`)}
@@ -90,6 +113,7 @@ const SalaryGradesList: React.FC = () => {
                     ✏ Sửa
                   </button>
 
+                  {/* DELETE (chưa làm backend phần này) */}
                   <button className="btn btn-sm btn-danger">🗑 Xóa</button>
                 </td>
               </tr>

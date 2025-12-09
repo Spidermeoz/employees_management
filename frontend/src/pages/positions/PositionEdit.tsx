@@ -1,79 +1,87 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { apiGet, apiPut } from "../../api/client";
 
-// Mock positions
-const mockPositions = [
-  {
-    id: 1,
-    name: "Nhân viên",
-    level: 1,
-    description: "Cấp độ nhân viên cơ bản",
-  },
-  {
-    id: 2,
-    name: "Trưởng nhóm",
-    level: 2,
-    description: "Quản lý nhóm nhỏ",
-  },
-  {
-    id: 3,
-    name: "Trưởng phòng",
-    level: 3,
-    description: "Quản lý toàn bộ phòng ban",
-  },
-];
+interface Position {
+  name: string;
+  level: number;
+  description?: string | null;
+}
 
 const PositionEdit: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<Position>({
     name: "",
     level: 1,
     description: "",
   });
+  const [error, setError] = useState<string | null>(null);
 
-  // Load data by ID
+  // 🔥 Load data thật từ API
   useEffect(() => {
-    const pos = mockPositions.find((p) => p.id === Number(id));
+    const loadPosition = async () => {
+      try {
+        const data = await apiGet<Position>(`/positions/${id}`);
+        setForm({
+          name: data.name,
+          level: data.level,
+          description: data.description || "",
+        });
+      } catch (err) {
+        console.error(err);
+        setError("Không thể tải dữ liệu chức vụ.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    if (pos) {
-      setForm({
-        name: pos.name,
-        level: pos.level,
-        description: pos.description,
-      });
-    }
-
-    setLoading(false);
+    loadPosition();
   }, [id]);
 
+  // Xử lý change
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    setForm({
+      ...form,
+      [name]: name === "level" ? Number(value) : value,
+    });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // 🔥 Submit API PUT /positions/:id
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
-    console.log("Updated Position:", form);
-    alert("Cập nhật chức vụ (mock). API chưa kết nối.");
+    try {
+      await apiPut(`/positions/${id}`, {
+        name: form.name,
+        level: form.level,
+        description: form.description || null,
+      });
 
-    navigate("/positions");
+      navigate("/positions");
+    } catch (err) {
+      console.error(err);
+      setError("Không thể cập nhật chức vụ. Vui lòng thử lại.");
+    }
   };
 
-  if (loading) return <p>Đang tải dữ liệu...</p>;
+  if (loading) return <p className="m-3">Đang tải dữ liệu...</p>;
 
   return (
     <div className="container-fluid">
       <h3 className="fw-bold mb-4">Chỉnh sửa chức vụ</h3>
 
       <form onSubmit={handleSubmit} className="card p-4 shadow-sm border-0">
-        
+        {error && <div className="alert alert-danger py-2">{error}</div>}
+
         {/* Tên chức vụ */}
         <div className="mb-3">
           <label className="form-label fw-bold">Tên chức vụ</label>
@@ -108,12 +116,12 @@ const PositionEdit: React.FC = () => {
             className="form-control"
             rows={3}
             name="description"
-            value={form.description}
+            value={form.description || ""}
             onChange={handleChange}
           ></textarea>
         </div>
 
-        {/* Buttons */}
+        {/* BUTTONS */}
         <div className="mt-4 d-flex gap-3">
           <button type="submit" className="btn btn-primary px-4">
             Cập nhật
@@ -127,7 +135,6 @@ const PositionEdit: React.FC = () => {
             Hủy
           </button>
         </div>
-
       </form>
     </div>
   );

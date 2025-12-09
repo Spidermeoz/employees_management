@@ -1,36 +1,48 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { apiGet } from "../../api/client";
 
-// MOCK DATA
-const mockPositions = [
-  {
-    id: 1,
-    name: "Nhân viên",
-    level: 1,
-    description: "Cấp độ nhân viên cơ bản",
-  },
-  {
-    id: 2,
-    name: "Trưởng nhóm",
-    level: 2,
-    description: "Quản lý nhóm nhỏ",
-  },
-  {
-    id: 3,
-    name: "Trưởng phòng",
-    level: 3,
-    description: "Quản lý toàn bộ phòng ban",
-  },
-];
+// Type theo PositionResponse (schemas)
+type Position = {
+  id: number;
+  name: string;
+  description?: string | null;
+  level: number;
+};
 
 const PositionsList: React.FC = () => {
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
 
-  const filtered = mockPositions.filter((p) =>
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 🔥 Load data thật từ backend
+  useEffect(() => {
+    const fetchPositions = async () => {
+      try {
+        const data = await apiGet<Position[]>("/positions");
+        setPositions(data);
+      } catch (err: any) {
+        console.error("Lỗi tải danh sách chức vụ:", err);
+        setError("Không thể tải danh sách chức vụ.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPositions();
+  }, []);
+
+  // SEARCH FILTER
+  const filtered = positions.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  if (loading) return <p className="m-3">Đang tải dữ liệu...</p>;
+  if (error) return <div className="alert alert-danger m-3">{error}</div>;
 
   return (
     <div className="container-fluid">
@@ -73,7 +85,8 @@ const PositionsList: React.FC = () => {
                 <td>
                   <span className="badge bg-secondary">Level {p.level}</span>
                 </td>
-                <td>{p.description}</td>
+                <td>{p.description || "—"}</td>
+
                 <td>
                   <button
                     className="btn btn-sm btn-info me-2"

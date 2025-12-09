@@ -1,34 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-
-// Mock salary grades
-const mockGrades = [
-  {
-    id: 1,
-    grade_name: "Bậc 1",
-    base_salary: 6000000,
-    coefficient: 1.0,
-  },
-  {
-    id: 2,
-    grade_name: "Bậc 2",
-    base_salary: 7000000,
-    coefficient: 1.2,
-  },
-  {
-    id: 3,
-    grade_name: "Bậc 3",
-    base_salary: 9000000,
-    coefficient: 1.5,
-  },
-];
+import { apiGet, apiPut } from "../../api/client";
 
 const SalaryGradeEdit: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     grade_name: "",
@@ -36,43 +16,62 @@ const SalaryGradeEdit: React.FC = () => {
     coefficient: "",
   });
 
-  // Load grade by ID
+  // 🔥 Load dữ liệu thật từ backend
   useEffect(() => {
-    const grade = mockGrades.find((g) => g.id === Number(id));
+    const fetchData = async () => {
+      try {
+        const data = await apiGet<any>(`/salary-grades/${id}`);
 
-    if (grade) {
-      setForm({
-        grade_name: grade.grade_name,
-        base_salary: String(grade.base_salary),
-        coefficient: String(grade.coefficient),
-      });
-    }
+        setForm({
+          grade_name: data.grade_name,
+          base_salary: String(Number(data.base_salary)),
+          coefficient: String(Number(data.coefficient)),
+        });
+      } catch (err) {
+        console.error(err);
+        setError("Không thể tải thông tin bậc lương.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    setLoading(false);
+    fetchData();
   }, [id]);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
-    console.log("Updated Salary Grade:", form);
-    alert("Cập nhật bậc lương (mock). API chưa kết nối.");
-    navigate("/salary-grades");
+    try {
+      const payload = {
+        grade_name: form.grade_name,
+        base_salary: Number(form.base_salary),
+        coefficient: Number(form.coefficient),
+      };
+
+      await apiPut(`/salary-grades/${id}`, payload);
+
+      alert("Cập nhật thành công!");
+      navigate("/salary-grades");
+    } catch (err) {
+      console.error(err);
+      setError("Không thể cập nhật bậc lương. Vui lòng thử lại.");
+    }
   };
 
-  if (loading) return <p>Đang tải dữ liệu...</p>;
+  if (loading) return <p className="m-3">Đang tải dữ liệu...</p>;
+
+  if (error) return <div className="alert alert-danger m-3">{error}</div>;
 
   return (
     <div className="container-fluid">
       <h3 className="fw-bold mb-4">Chỉnh sửa bậc lương</h3>
 
       <form onSubmit={handleSubmit} className="card p-4 shadow-sm border-0">
-
         {/* GRADE NAME */}
         <div className="mb-3">
           <label className="form-label fw-bold">Tên bậc lương</label>
@@ -129,7 +128,6 @@ const SalaryGradeEdit: React.FC = () => {
             Hủy
           </button>
         </div>
-
       </form>
     </div>
   );

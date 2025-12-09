@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { apiPost } from "../../api/client";
 
 const SalaryGradeCreate: React.FC = () => {
   const navigate = useNavigate();
@@ -11,18 +12,40 @@ const SalaryGradeCreate: React.FC = () => {
     coefficient: "1.00",
   });
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setLoading(true);
 
-    console.log("New Salary Grade:", form);
-    alert("Bậc lương đã được tạo (mock). API chưa kết nối.");
-    navigate("/salary-grades");
+    try {
+      // Chuẩn bị body để gửi lên backend
+      const payload = {
+        grade_name: form.grade_name,
+        base_salary: Number(form.base_salary),
+        coefficient: Number(form.coefficient),
+      };
+
+      await apiPost("/salary-grades", payload);
+
+      alert("Thêm bậc lương thành công!");
+      navigate("/salary-grades");
+    } catch (err: any) {
+      console.error("Error creating salary grade:", err);
+      setError(
+        "Không thể tạo bậc lương. Vui lòng kiểm tra dữ liệu hoặc thử lại."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -30,6 +53,7 @@ const SalaryGradeCreate: React.FC = () => {
       <h3 className="fw-bold mb-4">Thêm bậc lương</h3>
 
       <form onSubmit={handleSubmit} className="card p-4 shadow-sm border-0">
+        {error && <div className="alert alert-danger py-2">{error}</div>}
 
         {/* Tên bậc */}
         <div className="mb-3">
@@ -75,8 +99,12 @@ const SalaryGradeCreate: React.FC = () => {
 
         {/* BUTTONS */}
         <div className="mt-4 d-flex gap-3">
-          <button type="submit" className="btn btn-primary px-4">
-            Lưu
+          <button
+            type="submit"
+            className="btn btn-primary px-4"
+            disabled={loading}
+          >
+            {loading ? "Đang lưu..." : "Lưu"}
           </button>
 
           <button
@@ -87,7 +115,6 @@ const SalaryGradeCreate: React.FC = () => {
             Hủy
           </button>
         </div>
-
       </form>
     </div>
   );

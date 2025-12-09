@@ -1,55 +1,59 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { apiGet } from "../../api/client";
 
-// Mock positions
-const mockPositions = [
-  {
-    id: 1,
-    name: "Nhân viên",
-    level: 1,
-    description: "Cấp độ nhân viên cơ bản",
-  },
-  {
-    id: 2,
-    name: "Trưởng nhóm",
-    level: 2,
-    description: "Quản lý nhóm nhỏ",
-  },
-  {
-    id: 3,
-    name: "Trưởng phòng",
-    level: 3,
-    description: "Quản lý toàn bộ phòng ban",
-  },
-];
+interface Position {
+  id: number;
+  name: string;
+  level: number;
+  description?: string | null;
+}
 
-// Mock employees
-const mockEmployees = [
-  { id: 1, code: "NV001", name: "Nguyễn Văn A", position_id: 1, department: "Phòng Kế toán", status: "active" },
-  { id: 2, code: "NV002", name: "Trần Thị B", position_id: 2, department: "Phòng Nhân sự", status: "active" },
-  { id: 3, code: "NV003", name: "Phạm Văn C", position_id: 3, department: "Phòng IT", status: "active" },
-  { id: 4, code: "NV004", name: "Lê Thị D", position_id: 3, department: "Phòng IT", status: "inactive" },
-];
+interface Employee {
+  id: number;
+  code: string;
+  full_name: string;
+  department_id?: number | null;
+  status: string;
+}
 
 const PositionDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [position, setPosition] = useState<any>(null);
-  const [employees, setEmployees] = useState<any[]>([]);
+  const [position, setPosition] = useState<Position | null>(null);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // 🔥 Load info từ backend
   useEffect(() => {
-    // Load position info
-    const pos = mockPositions.find((p) => p.id === Number(id));
-    setPosition(pos || null);
+    const fetchData = async () => {
+      try {
+        const pos = await apiGet<Position>(`/positions/${id}`);
+        setPosition(pos);
 
-    // Load employees assigned to this position
-    const posEmployees = mockEmployees.filter((e) => e.position_id === Number(id));
-    setEmployees(posEmployees);
+        // Load employees theo position
+        const empList = await apiGet<Employee[]>(
+          `/employees?position_id=${id}`
+        );
+        setEmployees(empList);
+      } catch (err) {
+        console.error(err);
+        setError("Không thể tải dữ liệu. Vui lòng thử lại.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [id]);
 
-  if (!position) return <p>Đang tải dữ liệu...</p>;
+  if (loading) return <p className="m-3">Đang tải dữ liệu...</p>;
+  if (error) return <div className="alert alert-danger m-3">{error}</div>;
+
+  if (!position) return <p className="m-3">Không tìm thấy chức vụ.</p>;
 
   return (
     <div className="container-fluid">
@@ -58,10 +62,13 @@ const PositionDetail: React.FC = () => {
       {/* POSITION CARD */}
       <div className="card p-4 shadow-sm border-0 mb-4">
         <h4 className="fw-bold mb-2">
-          {position.name} <span className="badge bg-secondary">Level {position.level}</span>
+          {position.name}{" "}
+          <span className="badge bg-secondary">Level {position.level}</span>
         </h4>
 
-        <p><strong>Mô tả:</strong> {position.description}</p>
+        <p>
+          <strong>Mô tả:</strong> {position.description || "—"}
+        </p>
 
         <div className="mt-3 d-flex gap-3">
           <button
@@ -88,8 +95,8 @@ const PositionDetail: React.FC = () => {
           <thead className="table-light">
             <tr>
               <th>Mã NV</th>
-              <th>Tên</th>
-              <th>Phòng ban</th>
+              <th>Họ tên</th>
+              <th>ID Phòng ban</th>
               <th>Trạng thái</th>
               <th style={{ width: "150px" }}>Hành động</th>
             </tr>
@@ -100,8 +107,8 @@ const PositionDetail: React.FC = () => {
               employees.map((emp) => (
                 <tr key={emp.id}>
                   <td>{emp.code}</td>
-                  <td>{emp.name}</td>
-                  <td>{emp.department}</td>
+                  <td>{emp.full_name}</td>
+                  <td>{emp.department_id || "—"}</td>
                   <td>
                     <span
                       className={
@@ -121,6 +128,7 @@ const PositionDetail: React.FC = () => {
                     >
                       👁 Xem
                     </button>
+
                     <button
                       className="btn btn-sm btn-warning"
                       onClick={() => navigate(`/employees/${emp.id}/edit`)}

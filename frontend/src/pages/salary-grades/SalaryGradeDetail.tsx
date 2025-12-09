@@ -1,40 +1,71 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { apiGet } from "../../api/client";
 
-// Mock salary grades
-const mockGrades = [
-  { id: 1, grade_name: "Bậc 1", base_salary: 6000000, coefficient: 1.0 },
-  { id: 2, grade_name: "Bậc 2", base_salary: 7000000, coefficient: 1.2 },
-  { id: 3, grade_name: "Bậc 3", base_salary: 9000000, coefficient: 1.5 },
-];
+type SalaryGrade = {
+  id: number;
+  grade_name: string;
+  base_salary: number;
+  coefficient: number;
+};
 
-// Mock employees with salary_grade_id
-const mockEmployees = [
-  { id: 1, code: "NV001", name: "Nguyễn Văn A", department: "Phòng Kế toán", position: "Kế toán viên", status: "active", salary_grade_id: 1 },
-  { id: 2, code: "NV002", name: "Trần Thị B", department: "Phòng Nhân sự", position: "HR Executive", status: "active", salary_grade_id: 2 },
-  { id: 3, code: "NV003", name: "Phạm Văn C", department: "Phòng IT", position: "Developer", status: "active", salary_grade_id: 2 },
-  { id: 4, code: "NV004", name: "Lê Thị D", department: "Phòng IT", position: "Tester", status: "inactive", salary_grade_id: 3 },
-];
+type Employee = {
+  id: number;
+  code: string;
+  full_name: string;
+  department_id?: number | null;
+  position_id?: number | null;
+  status: string;
+};
 
 const SalaryGradeDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [grade, setGrade] = useState<any>(null);
-  const [employees, setEmployees] = useState<any[]>([]);
+  const [grade, setGrade] = useState<SalaryGrade | null>(null);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // 🔥 Load dữ liệu thật từ backend
   useEffect(() => {
-    // Load grade info
-    const g = mockGrades.find((gr) => gr.id === Number(id));
-    setGrade(g || null);
+    const loadData = async () => {
+      try {
+        setLoading(true);
 
-    // Load employees having this salary grade
-    const list = mockEmployees.filter((e) => e.salary_grade_id === Number(id));
-    setEmployees(list);
+        // 1️⃣ Lấy thông tin bậc lương
+        const gradeData = await apiGet<SalaryGrade>(`/salary-grades/${id}`);
+
+        // Backend trả DECIMAL dưới dạng string?
+        const normalizedGrade = {
+          ...gradeData,
+          base_salary: Number(gradeData.base_salary),
+          coefficient: Number(gradeData.coefficient),
+        };
+        setGrade(normalizedGrade);
+
+        // 2️⃣ Lấy danh sách employee theo salary_grade_id
+        const empData = await apiGet<Employee[]>(
+          `/employees?salary_grade_id=${id}`
+        );
+        setEmployees(empData);
+      } catch (err) {
+        console.error(err);
+        setError("Không thể tải dữ liệu.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, [id]);
 
-  if (!grade) return <p>Đang tải dữ liệu...</p>;
+  if (loading) return <p className="m-3">Đang tải dữ liệu...</p>;
+
+  if (error) return <div className="alert alert-danger m-3">{error}</div>;
+
+  if (!grade) return <p className="m-3">Không tìm thấy bậc lương.</p>;
 
   return (
     <div className="container-fluid">
@@ -80,8 +111,8 @@ const SalaryGradeDetail: React.FC = () => {
             <tr>
               <th>Mã NV</th>
               <th>Họ tên</th>
-              <th>Phòng ban</th>
-              <th>Chức vụ</th>
+              <th>Phòng ban (ID)</th>
+              <th>Chức vụ (ID)</th>
               <th>Trạng thái</th>
               <th style={{ width: "150px" }}>Hành động</th>
             </tr>
@@ -92,9 +123,9 @@ const SalaryGradeDetail: React.FC = () => {
               employees.map((emp) => (
                 <tr key={emp.id}>
                   <td>{emp.code}</td>
-                  <td>{emp.name}</td>
-                  <td>{emp.department}</td>
-                  <td>{emp.position}</td>
+                  <td>{emp.full_name}</td>
+                  <td>{emp.department_id || "—"}</td>
+                  <td>{emp.position_id || "—"}</td>
                   <td>
                     <span
                       className={

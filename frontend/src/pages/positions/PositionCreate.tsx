@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { apiPost } from "../../api/client";
 
 const PositionCreate: React.FC = () => {
   const navigate = useNavigate();
@@ -11,18 +12,39 @@ const PositionCreate: React.FC = () => {
     description: "",
   });
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    setForm({
+      ...form,
+      [name]: name === "level" ? Number(value) : value,
+    });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setLoading(true);
 
-    console.log("New Position:", form);
-    alert("Chức vụ đã được tạo (mock). API chưa kết nối.");
-    navigate("/positions");
+    try {
+      await apiPost("/positions", {
+        name: form.name,
+        level: form.level,
+        description: form.description || null,
+      });
+
+      navigate("/positions");
+    } catch (err: any) {
+      console.error("Lỗi tạo chức vụ:", err);
+      setError("Không thể tạo chức vụ. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -30,7 +52,9 @@ const PositionCreate: React.FC = () => {
       <h3 className="fw-bold mb-4">Thêm chức vụ</h3>
 
       <form onSubmit={handleSubmit} className="card p-4 shadow-sm border-0">
-        
+        {/* ERROR */}
+        {error && <div className="alert alert-danger py-2">{error}</div>}
+
         {/* NAME */}
         <div className="mb-3">
           <label className="form-label fw-bold">Tên chức vụ</label>
@@ -72,8 +96,12 @@ const PositionCreate: React.FC = () => {
 
         {/* BUTTONS */}
         <div className="mt-4 d-flex gap-3">
-          <button type="submit" className="btn btn-primary px-4">
-            Lưu
+          <button
+            type="submit"
+            className="btn btn-primary px-4"
+            disabled={loading}
+          >
+            {loading ? "Đang lưu..." : "Lưu"}
           </button>
 
           <button
@@ -84,7 +112,6 @@ const PositionCreate: React.FC = () => {
             Hủy
           </button>
         </div>
-
       </form>
     </div>
   );
