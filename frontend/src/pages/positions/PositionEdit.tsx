@@ -2,6 +2,13 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { apiGet, apiPut } from "../../api/client";
+import {
+  FaBriefcase,
+  FaSave,
+  FaTimes,
+  FaSpinner,
+  FaExclamationTriangle,
+} from "react-icons/fa";
 
 interface Position {
   name: string;
@@ -14,14 +21,32 @@ const PositionEdit: React.FC = () => {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  const [submitMessageType, setSubmitMessageType] = useState<
+    "success" | "error" | null
+  >(null);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
   const [form, setForm] = useState<Position>({
     name: "",
     level: 1,
     description: "",
   });
-  const [error, setError] = useState<string | null>(null);
 
-  // 🔥 Load data thật từ API
+  // 🔥 Hàm xác thực form
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+    if (!form.name.trim()) {
+      newErrors.name = "Tên chức vụ là bắt buộc.";
+    }
+    if (!form.level || form.level <= 0) {
+      newErrors.level = "Level phải là số lớn hơn 0.";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   useEffect(() => {
     const loadPosition = async () => {
       try {
@@ -33,7 +58,8 @@ const PositionEdit: React.FC = () => {
         });
       } catch (err) {
         console.error(err);
-        setError("Không thể tải dữ liệu chức vụ.");
+        setSubmitMessage("Không thể tải dữ liệu chức vụ.");
+        setSubmitMessageType("error");
       } finally {
         setLoading(false);
       }
@@ -42,22 +68,27 @@ const PositionEdit: React.FC = () => {
     loadPosition();
   }, [id]);
 
-  // Xử lý change
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-
     setForm({
       ...form,
       [name]: name === "level" ? Number(value) : value,
     });
+
+    // Xóa lỗi khi người dùng bắt đầu sửa
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: "" });
+    }
   };
 
-  // 🔥 Submit API PUT /positions/:id
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+    setSubmitMessage(null);
 
     try {
       await apiPut(`/positions/${id}`, {
@@ -66,76 +97,120 @@ const PositionEdit: React.FC = () => {
         description: form.description || null,
       });
 
-      navigate("/positions");
+      setSubmitMessage("Cập nhật chức vụ thành công!");
+      setSubmitMessageType("success");
+      setTimeout(() => navigate("/positions"), 1500); // Chuyển trang sau 1.5s
     } catch (err) {
       console.error(err);
-      setError("Không thể cập nhật chức vụ. Vui lòng thử lại.");
+      setSubmitMessage("Không thể cập nhật chức vụ. Vui lòng thử lại.");
+      setSubmitMessageType("error");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  if (loading) return <p className="m-3">Đang tải dữ liệu...</p>;
+  if (loading) return <p className="m-3 text-center">Đang tải dữ liệu...</p>;
 
   return (
-    <div className="container-fluid">
-      <h3 className="fw-bold mb-4">Chỉnh sửa chức vụ</h3>
-
-      <form onSubmit={handleSubmit} className="card p-4 shadow-sm border-0">
-        {error && <div className="alert alert-danger py-2">{error}</div>}
-
-        {/* Tên chức vụ */}
-        <div className="mb-3">
-          <label className="form-label fw-bold">Tên chức vụ</label>
-          <input
-            type="text"
-            className="form-control"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            required
-          />
+    <div className="container-fluid p-4" style={{ backgroundColor: "#f8f9fa" }}>
+      <div className="card shadow-sm border-0">
+        <div className="card-header bg-white py-3">
+          <h3 className="fw-bold mb-0">
+            <FaBriefcase className="me-2" />
+            Chỉnh sửa chức vụ
+          </h3>
         </div>
+        <div className="card-body">
+          {/* Thông báo thành công/lỗi */}
+          {submitMessage && (
+            <div
+              className={`alert alert-${
+                submitMessageType === "success" ? "success" : "danger"
+              } d-flex align-items-center`}
+              role="alert"
+            >
+              {submitMessage}
+            </div>
+          )}
 
-        {/* Level */}
-        <div className="mb-3">
-          <label className="form-label fw-bold">Level</label>
-          <input
-            type="number"
-            min={1}
-            className="form-control"
-            name="level"
-            value={form.level}
-            onChange={handleChange}
-            required
-          />
+          <form onSubmit={handleSubmit} noValidate>
+            {/* TÊN CHỨC VỤ */}
+            <div className="mb-3">
+              <label className="form-label fw-bold">Tên chức vụ *</label>
+              <input
+                type="text"
+                className={`form-control ${errors.name ? "is-invalid" : ""}`}
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                required
+              />
+              {errors.name && (
+                <div className="invalid-feedback d-flex align-items-center">
+                  <FaExclamationTriangle className="me-1" />
+                  {errors.name}
+                </div>
+              )}
+            </div>
+
+            {/* LEVEL */}
+            <div className="mb-3">
+              <label className="form-label fw-bold">Level *</label>
+              <input
+                type="number"
+                min={1}
+                className={`form-control ${errors.level ? "is-invalid" : ""}`}
+                name="level"
+                value={form.level}
+                onChange={handleChange}
+                required
+              />
+              {errors.level && (
+                <div className="invalid-feedback d-flex align-items-center">
+                  <FaExclamationTriangle className="me-1" />
+                  {errors.level}
+                </div>
+              )}
+            </div>
+
+            {/* MÔ TẢ */}
+            <div className="mb-4">
+              <label className="form-label fw-bold">Mô tả</label>
+              <textarea
+                className="form-control"
+                name="description"
+                rows={4}
+                value={form.description || ""}
+                onChange={handleChange}
+                placeholder="Nhập mô tả cho chức vụ (không bắt buộc)..."
+              ></textarea>
+            </div>
+
+            {/* BUTTONS */}
+            <div className="d-flex justify-content-end gap-2">
+              <button
+                type="button"
+                className="btn btn-secondary px-4"
+                onClick={() => navigate("/positions")}
+              >
+                <FaTimes className="me-1" /> Hủy
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary px-4"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <FaSpinner className="fa-spin me-1" />
+                ) : (
+                  <FaSave className="me-1" />
+                )}
+                {isSubmitting ? "Đang cập nhật..." : "Cập nhật"}
+              </button>
+            </div>
+          </form>
         </div>
-
-        {/* Mô tả */}
-        <div className="mb-3">
-          <label className="form-label fw-bold">Mô tả</label>
-          <textarea
-            className="form-control"
-            rows={3}
-            name="description"
-            value={form.description || ""}
-            onChange={handleChange}
-          ></textarea>
-        </div>
-
-        {/* BUTTONS */}
-        <div className="mt-4 d-flex gap-3">
-          <button type="submit" className="btn btn-primary px-4">
-            Cập nhật
-          </button>
-
-          <button
-            type="button"
-            className="btn btn-secondary px-4"
-            onClick={() => navigate("/positions")}
-          >
-            Hủy
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   );
 };

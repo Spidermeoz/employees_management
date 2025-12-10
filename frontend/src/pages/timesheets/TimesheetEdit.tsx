@@ -2,6 +2,14 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { apiGet, apiPut } from "../../api/client";
+import {
+  FaUserClock,
+  FaSave,
+  FaTimes,
+  FaSpinner,
+  FaExclamationTriangle,
+  FaClock,
+} from "react-icons/fa";
 
 type Employee = {
   id: number;
@@ -17,13 +25,22 @@ type Timesheet = {
   working_hours?: number | string | null;
 };
 
+// 👉 Chuẩn hóa giờ về dạng HH:mm
+const normalizeTime = (time: string | null | undefined) => {
+  if (!time) return "";
+  return time.length === 8 ? time.slice(0, 5) : time;
+};
+
+// 👉 Tạo Date chuẩn để tính giờ
+const buildDateTime = (date: string, time: string) => {
+  return new Date(`${date}T${time}:00`);
+};
+
 const TimesheetEdit: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
-
   const [form, setForm] = useState({
     employee_id: "",
     date: "",
@@ -32,204 +49,282 @@ const TimesheetEdit: React.FC = () => {
     working_hours: 0,
   });
 
-  // 🔥 Hàm lấy giờ hiện tại
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  const [submitMessageType, setSubmitMessageType] = useState<
+    "success" | "error" | null
+  >(null);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  // 👉 Hàm tính giờ làm CHUẨN, đảm bảo không trả 0 lung tung
+  const calculateWorkingHours = (
+    date: string,
+    check_in: string,
+    check_out: string
+  ) => {
+    if (!date || !check_in || !check_out) return 0;
+
+    const start = buildDateTime(date, check_in);
+    const end = buildDateTime(date, check_out);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
+    if (end <= start) return 0;
+
+    const diff = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+    return Number(diff.toFixed(2));
+  };
+
+  // 👉 Handle update when any field changes
+  const updateForm = (name: string, value: string) => {
+    setForm((prev) => {
+      const updated = { ...prev, [name]: value };
+
+      updated.working_hours = calculateWorkingHours(
+        updated.date,
+        updated.check_in,
+        updated.check_out
+      );
+
+      return updated;
+    });
+  };
+
+  // 👉 Lấy thời gian hiện tại
   const getNowTime = () => {
     const now = new Date();
-    const hh = String(now.getHours()).padStart(2, "0");
-    const mm = String(now.getMinutes()).padStart(2, "0");
-    return `${hh}:${mm}`;
+    return (
+      String(now.getHours()).padStart(2, "0") +
+      ":" +
+      String(now.getMinutes()).padStart(2, "0")
+    );
   };
 
-  // 🔥 Tính số giờ làm
-  const calculateHours = (start: string, end: string) => {
-    if (!start || !end) return 0;
+  const setCurrentCheckIn = () => updateForm("check_in", getNowTime());
+  const setCurrentCheckOut = () => updateForm("check_out", getNowTime());
 
-    const s = new Date(`2020-01-01T${start}`);
-    const e = new Date(`2020-01-01T${end}`);
-
-    const diff = (e.getTime() - s.getTime()) / (1000 * 60 * 60);
-    return diff > 0 ? Number(diff.toFixed(2)) : 0;
-  };
-
-  // 🎯 Load timesheet + employee list từ backend
+  // 👉 Load dữ liệu từ API
   useEffect(() => {
-    const fetchData = async () => {
+    const loadData = async () => {
       try {
-        const employeesData = await apiGet<Employee[]>("/employees");
-        setEmployees(employeesData);
+        const [empList, ts] = await Promise.all([
+          apiGet<Employee[]>("/employees"),
+          apiGet<Timesheet>(`/timesheets/${id}`),
+        ]);
 
-        const ts = await apiGet<Timesheet>(`/timesheets/${id}`);
+        setEmployees(empList);
 
-        setForm({
+        const normalizedForm = {
           employee_id: String(ts.employee_id),
           date: ts.date,
-          check_in: ts.check_in || "",
-          check_out: ts.check_out || "",
-          working_hours: ts.working_hours ? Number(ts.working_hours) : 0,
-        });
+          check_in: normalizeTime(ts.check_in),
+          check_out: normalizeTime(ts.check_out),
+          working_hours: 0,
+        };
+
+        normalizedForm.working_hours = calculateWorkingHours(
+          normalizedForm.date,
+          normalizedForm.check_in,
+          normalizedForm.check_out
+        );
+
+        setForm(normalizedForm);
       } catch (err) {
         console.error(err);
-        alert("Không thể tải dữ liệu chấm công.");
+        setSubmitMessage("Không thể tải dữ liệu");
+        setSubmitMessageType("error");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    loadData();
   }, [id]);
 
-  // 🎯 Tự tính lại số giờ khi sửa check_in / check_out
-  useEffect(() => {
-    const hours = calculateHours(form.check_in, form.check_out);
-    setForm((prev) => ({ ...prev, working_hours: hours }));
-  }, [form.check_in, form.check_out]);
+  const validateForm = () => {
+    const newErrors: any = {};
 
-  // 🎯 Auto-update form fields
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    if (!form.employee_id) newErrors.employee_id = "Vui lòng chọn nhân viên";
+    if (!form.date) newErrors.date = "Vui lòng chọn ngày";
+    if (!form.check_in && !form.check_out)
+      newErrors.check_out = "Phải có ít nhất 1 thời gian";
+
+    if (form.check_in && form.check_out) {
+      const start = buildDateTime(form.date, form.check_in);
+      const end = buildDateTime(form.date, form.check_out);
+      if (end <= start) newErrors.check_out = "Giờ check-out phải sau check-in";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  // 🔥 Gửi API cập nhật timesheet
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
 
-    const payload = {
-      employee_id: Number(form.employee_id),
-      date: form.date,
-      check_in: form.check_in || null,
-      check_out: form.check_out || null,
-      working_hours: form.working_hours,
-    };
+    setIsSubmitting(true);
 
     try {
+      const payload: any = {
+        employee_id: Number(form.employee_id),
+        date: form.date,
+        check_in: form.check_in || null,
+        check_out: form.check_out || null,
+        working_hours:
+          form.check_in && form.check_out ? form.working_hours : null,
+      };
+
       await apiPut(`/timesheets/${id}`, payload);
 
-      alert("Cập nhật chấm công thành công!");
-      navigate("/timesheets");
+      setSubmitMessage("Cập nhật thành công!");
+      setSubmitMessageType("success");
+
+      setTimeout(() => navigate("/timesheets"), 1200);
     } catch (err) {
       console.error(err);
-      alert("Không thể cập nhật chấm công.");
+      setSubmitMessage("Không thể cập nhật");
+      setSubmitMessageType("error");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  if (loading) return <p className="m-3">Đang tải dữ liệu...</p>;
+  if (loading) return <p className="m-3 text-center">Đang tải dữ liệu...</p>;
 
   return (
-    <div className="container-fluid">
-      <h3 className="fw-bold mb-4">Chỉnh sửa chấm công</h3>
-
-      <form onSubmit={handleSubmit} className="card p-4 shadow-sm border-0">
-        {/* EMPLOYEE */}
-        <div className="mb-3">
-          <label className="form-label fw-bold">Nhân viên</label>
-          <select
-            className="form-select"
-            name="employee_id"
-            value={form.employee_id}
-            onChange={handleChange}
-            required
-          >
-            <option value="">-- Chọn nhân viên --</option>
-            {employees.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.full_name}
-              </option>
-            ))}
-          </select>
+    <div className="container-fluid p-4" style={{ backgroundColor: "#f8f9fa" }}>
+      <div className="card shadow-sm border-0">
+        <div className="card-header bg-white">
+          <h3 className="fw-bold mb-0">
+            <FaUserClock className="me-2" />
+            Chỉnh sửa chấm công
+          </h3>
         </div>
 
-        {/* DATE */}
-        <div className="mb-3">
-          <label className="form-label fw-bold">Ngày</label>
-          <input
-            type="date"
-            className="form-control"
-            name="date"
-            value={form.date}
-            onChange={handleChange}
-            required
-          />
-        </div>
+        <div className="card-body">
+          {submitMessage && (
+            <div
+              className={`alert alert-${
+                submitMessageType === "success" ? "success" : "danger"
+              }`}
+            >
+              {submitMessage}
+            </div>
+          )}
 
-        {/* TIME INPUTS */}
-        <div className="row g-3">
-          {/* CHECK-IN */}
-          <div className="col-md-6">
-            <label className="form-label fw-bold">Giờ check-in</label>
-            <div className="input-group">
+          <form onSubmit={handleSubmit}>
+            {/* EMPLOYEE */}
+            <div className="mb-3">
+              <label className="fw-bold">Nhân viên *</label>
+              <select
+                className={`form-select ${
+                  errors.employee_id ? "is-invalid" : ""
+                }`}
+                value={form.employee_id}
+                name="employee_id"
+                onChange={(e) => updateForm("employee_id", e.target.value)}
+              >
+                <option value="">-- Chọn nhân viên --</option>
+                {employees.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.full_name}
+                  </option>
+                ))}
+              </select>
+              {errors.employee_id && (
+                <div className="invalid-feedback">{errors.employee_id}</div>
+              )}
+            </div>
+
+            {/* DATE */}
+            <div className="mb-3">
+              <label className="fw-bold">Ngày *</label>
               <input
-                type="time"
-                className="form-control"
-                name="check_in"
-                value={form.check_in}
-                onChange={handleChange}
+                type="date"
+                className={`form-control ${errors.date ? "is-invalid" : ""}`}
+                value={form.date}
+                onChange={(e) => updateForm("date", e.target.value)}
               />
+              {errors.date && (
+                <div className="invalid-feedback">{errors.date}</div>
+              )}
+            </div>
+
+            <div className="row">
+              {/* CHECK-IN */}
+              <div className="col-md-6 mb-3">
+                <label className="fw-bold">Giờ check-in</label>
+                <div className="input-group">
+                  <input
+                    type="time"
+                    className="form-control"
+                    value={form.check_in}
+                    onChange={(e) => updateForm("check_in", e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary"
+                    onClick={setCurrentCheckIn}
+                  >
+                    <FaClock />
+                  </button>
+                </div>
+              </div>
+
+              {/* CHECK-OUT */}
+              <div className="col-md-6 mb-3">
+                <label className="fw-bold">Giờ check-out</label>
+                <div className="input-group">
+                  <input
+                    type="time"
+                    className="form-control"
+                    value={form.check_out}
+                    onChange={(e) => updateForm("check_out", e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary"
+                    onClick={setCurrentCheckOut}
+                  >
+                    <FaClock />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* HOURS */}
+            <div className="mb-4">
+              <label className="fw-bold">Số giờ làm</label>
+              <input
+                type="number"
+                className="form-control"
+                readOnly
+                value={form.working_hours}
+              />
+            </div>
+
+            <div className="d-flex justify-content-end gap-2">
+              <button
+                className="btn btn-secondary"
+                type="button"
+                onClick={() => navigate("/timesheets")}
+              >
+                <FaTimes /> Hủy
+              </button>
 
               <button
-                type="button"
-                className="btn btn-outline-primary"
-                onClick={() =>
-                  setForm((prev) => ({ ...prev, check_in: getNowTime() }))
-                }
+                className="btn btn-primary"
+                type="submit"
+                disabled={isSubmitting}
               >
-                Hiện tại
+                {isSubmitting ? <FaSpinner className="fa-spin" /> : <FaSave />}{" "}
+                Cập nhật
               </button>
             </div>
-          </div>
-
-          {/* CHECK-OUT */}
-          <div className="col-md-6">
-            <label className="form-label fw-bold">Giờ check-out</label>
-            <div className="input-group">
-              <input
-                type="time"
-                className="form-control"
-                name="check_out"
-                value={form.check_out}
-                onChange={handleChange}
-              />
-
-              <button
-                type="button"
-                className="btn btn-outline-primary"
-                onClick={() =>
-                  setForm((prev) => ({ ...prev, check_out: getNowTime() }))
-                }
-              >
-                Hiện tại
-              </button>
-            </div>
-          </div>
+          </form>
         </div>
-
-        {/* HOURS */}
-        <div className="mt-3">
-          <label className="form-label fw-bold">Số giờ làm</label>
-          <input
-            type="number"
-            className="form-control"
-            value={form.working_hours}
-            readOnly
-          />
-        </div>
-
-        {/* BUTTONS */}
-        <div className="mt-4 d-flex gap-3">
-          <button type="submit" className="btn btn-primary px-4">
-            Cập nhật
-          </button>
-
-          <button
-            type="button"
-            className="btn btn-secondary px-4"
-            onClick={() => navigate("/timesheets")}
-          >
-            Hủy
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   );
 };
