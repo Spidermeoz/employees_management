@@ -6,9 +6,7 @@ import {
   FaEdit,
   FaArrowLeft,
   FaUser,
-  FaCalendarAlt,
   FaGift,
-  FaExclamationTriangle,
 } from "react-icons/fa";
 
 type RewardItem = {

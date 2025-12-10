@@ -1,6 +1,8 @@
-from pydantic import BaseModel
-from typing import Optional
 from decimal import Decimal
+from typing import Optional
+
+from app.schemas.employees import EmployeeMini
+from pydantic import BaseModel
 
 
 class PayrollBase(BaseModel):
@@ -28,6 +30,7 @@ class PayrollUpdate(BaseModel):
 
 class PayrollResponse(PayrollBase):
     id: int
+    employee: Optional[EmployeeMini] = None
 
     class Config:
         orm_mode = True

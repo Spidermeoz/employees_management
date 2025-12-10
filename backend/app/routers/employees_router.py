@@ -53,7 +53,7 @@ def list_employees(
         page_size = 20
 
     skip = (page - 1) * page_size
-    employees = query.order_by(Employee.id.desc()).offset(skip).limit(page_size).all()
+    employees = (query.options(joinedload(Employee.salary_grade)).order_by(Employee.id.desc()).offset(skip).limit(page_size).all())
 
     return employees
 

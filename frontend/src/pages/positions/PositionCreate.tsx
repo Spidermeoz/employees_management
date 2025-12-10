@@ -19,7 +19,6 @@ const PositionCreate: React.FC = () => {
     description: "",
   });
 
-  const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
   const [submitMessageType, setSubmitMessageType] = useState<

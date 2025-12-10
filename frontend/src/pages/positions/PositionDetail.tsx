@@ -7,7 +7,6 @@ import {
   FaArrowLeft,
   FaEye,
   FaUsers,
-  FaBriefcase,
   FaInbox,
 } from "react-icons/fa";
 

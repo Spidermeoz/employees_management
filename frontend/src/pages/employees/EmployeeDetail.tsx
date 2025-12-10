@@ -5,7 +5,6 @@ import { apiGet } from "../../api/client";
 import {
   FaUser,
   FaBriefcase,
-  FaCalendarAlt,
   FaMoneyBillWave,
   FaEdit,
   FaArrowLeft,

@@ -18,6 +18,14 @@ class EmployeeBase(BaseModel):
     status: Optional[str] = "active"
 
 
+class EmployeeMini(BaseModel):
+    id: int
+    full_name: str
+
+    class Config:
+        orm_mode = True
+
+
 class EmployeeCreate(EmployeeBase):
     code: str
     avatar: Optional[str] = None
@@ -48,6 +56,7 @@ class PositionInfo(BaseModel):
 class SalaryGradeInfo(BaseModel):
     id: int
     grade_name: str
+    base_salary: float
 
     class Config:
         orm_mode = True

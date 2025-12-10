@@ -1,12 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from typing import List, Optional
 
+from app.auth.jwt_bearer import JWTBearer
 from app.database import get_db
 from app.models.payrolls import Payroll
-from app.schemas.payrolls import PayrollCreate, PayrollUpdate, PayrollResponse
-
-from app.auth.jwt_bearer import JWTBearer
+from app.schemas.payrolls import PayrollCreate, PayrollResponse, PayrollUpdate
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session, joinedload
 
 router = APIRouter(prefix="/payrolls", tags=["Payrolls"], dependencies=[Depends(JWTBearer())])
 
@@ -34,12 +33,17 @@ def list_payrolls(
 
 @router.get("/{payroll_id}", response_model=PayrollResponse)
 def get_payroll(payroll_id: int, db: Session = Depends(get_db)):
-    item = db.query(Payroll).filter(Payroll.id == payroll_id).first()
+    payroll = (
+        db.query(Payroll)
+        .options(joinedload(Payroll.employee))
+        .filter(Payroll.id == payroll_id)
+        .first()
+    )
 
-    if not item:
+    if not payroll:
         raise HTTPException(404, "Không tìm thấy bảng lương")
 
-    return item
+    return payroll
 
 
 @router.post("/", response_model=PayrollResponse, status_code=201)

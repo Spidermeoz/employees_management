@@ -8,7 +8,6 @@ import {
   FaTimes,
   FaSpinner,
   FaUser,
-  FaCalendarAlt,
   FaExclamationTriangle,
 } from "react-icons/fa";
 

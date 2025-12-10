@@ -8,15 +8,8 @@ import {
   FaSave,
   FaTimes,
   FaSpinner,
-  FaUser,
-  FaCalendarAlt,
   FaExclamationTriangle,
   FaTrash,
-  FaFilePdf,
-  FaFileImage,
-  FaFileWord,
-  FaFileExcel,
-  FaRegFile,
 } from "react-icons/fa";
 
 type Employee = {
@@ -148,18 +141,6 @@ const ContractCreate: React.FC = () => {
   };
 
   if (loading) return <p className="m-3 text-center">Đang tải dữ liệu...</p>;
-
-  // Helper để render icon file
-  const getFileIcon = (type: string) => {
-    if (type === "pdf") return <FaFilePdf className="me-2 text-danger" />;
-    if (["jpg", "jpeg", "png", "gif", "webp"].includes(type))
-      return <FaFileImage className="me-2 text-success" />;
-    if (["doc", "docx"].includes(type))
-      return <FaFileWord className="me-2 text-primary" />;
-    if (["xls", "xlsx"].includes(type))
-      return <FaFileExcel className="me-2 text-success" />;
-    return <FaRegFile className="me-2 text-secondary" />;
-  };
 
   return (
     <div className="container-fluid p-4" style={{ backgroundColor: "#f8f9fa" }}>

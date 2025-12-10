@@ -5,7 +5,6 @@ import { apiGet, apiPut } from "../../api/client";
 import {
   FaUser,
   FaGift,
-  FaCalendarAlt,
   FaSave,
   FaTimes,
   FaSpinner,
