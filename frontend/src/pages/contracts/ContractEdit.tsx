@@ -25,6 +25,7 @@ type Contract = {
   end_date?: string | null;
   note?: string | null;
   file_url?: string | null;
+  salary: number;
 };
 
 const ContractEdit: React.FC = () => {
@@ -43,6 +44,7 @@ const ContractEdit: React.FC = () => {
   const [form, setForm] = useState({
     employee_id: "",
     contract_type: "",
+    salary: "",
     start_date: "",
     end_date: "",
     note: "",
@@ -59,6 +61,11 @@ const ContractEdit: React.FC = () => {
     if (!form.contract_type)
       newErrors.contract_type = "Vui lòng nhập loại hợp đồng.";
     if (!form.start_date) newErrors.start_date = "Vui lòng chọn ngày bắt đầu.";
+    if (!form.salary) {
+      newErrors.salary = "Vui lòng nhập lương.";
+    } else if (isNaN(Number(form.salary)) || Number(form.salary) <= 0) {
+      newErrors.salary = "Lương phải là một số dương.";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -75,6 +82,7 @@ const ContractEdit: React.FC = () => {
         setForm({
           employee_id: String(contractData.employee_id),
           contract_type: contractData.contract_type,
+          salary: String(contractData.salary || ""),
           start_date: contractData.start_date,
           end_date: contractData.end_date || "",
           note: contractData.note || "",
@@ -148,6 +156,7 @@ const ContractEdit: React.FC = () => {
       const payload = {
         employee_id: Number(form.employee_id),
         contract_type: form.contract_type,
+        salary: Number(form.salary),
         start_date: form.start_date,
         end_date: form.end_date || null,
         note: form.note || null,
@@ -249,6 +258,25 @@ const ContractEdit: React.FC = () => {
                   {errors.contract_type}
                 </div>
               )}
+            </div>
+
+            {/* LƯƠNG */}
+            <div className="mb-3">
+              <label className="form-label fw-bold">Lương</label>
+              <input
+                type="text"
+                className="form-control-plaintext"
+                name="salary"
+                value={
+                  form.salary
+                    ? new Intl.NumberFormat("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      }).format(Number(form.salary))
+                    : ""
+                }
+                readOnly
+              />
             </div>
 
             {/* NGÀY BẮT ĐẦU / KẾT THÚC */}

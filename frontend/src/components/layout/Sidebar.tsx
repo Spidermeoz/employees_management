@@ -121,14 +121,6 @@ const Sidebar: React.FC = () => {
             </NavLink>
           ))}
         </nav>
-
-        {/* User Profile Section */}
-        <div className="user-profile mt-auto">
-          <NavLink to="/logout">
-            <FaSignOutAlt />
-            <span>Đăng xuất</span>
-          </NavLink>
-        </div>
       </div>
     </>
   );

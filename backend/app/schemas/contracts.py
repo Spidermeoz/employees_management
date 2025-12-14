@@ -26,11 +26,13 @@ class EmployeeSmall(BaseModel):
 
 
 class ContractUpdate(BaseModel):
+    employee_id: Optional[int]
     contract_type: Optional[str]
     salary: Optional[Decimal]
     start_date: Optional[date]
     end_date: Optional[date]
     file_url: Optional[str]
+    note: Optional[str]
 
 
 class ContractResponse(ContractBase):
