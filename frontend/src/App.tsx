@@ -47,26 +47,36 @@ import PayrollCreate from "./pages/payrolls/PayrollCreate";
 import PayrollEdit from "./pages/payrolls/PayrollEdit";
 import PayrollDetail from "./pages/payrolls/PayrollDetail";
 
-/* Protected Route */
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+/* =======================
+   AUTH GUARD
+======================= */
+const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem("access_token");
-  return token ? <>{children}</> : <Navigate to="/login" replace />;
+
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
 };
 
+/* =======================
+   APP
+======================= */
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* AUTH */}
+        {/* LOGIN */}
         <Route path="/login" element={<LoginPage />} />
 
-        {/* ADMIN LAYOUT */}
+        {/* ADMIN (PROTECTED) */}
         <Route
           path="/"
           element={
-            <ProtectedRoute>
+            <AuthGuard>
               <AdminLayout />
-            </ProtectedRoute>
+            </AuthGuard>
           }
         >
           {/* Dashboard */}
@@ -108,7 +118,7 @@ function App() {
           <Route path="timesheets/:id/edit" element={<TimesheetEdit />} />
           <Route path="timesheets/:id" element={<TimesheetDetail />} />
 
-          {/* Rewards / Discipline */}
+          {/* Rewards */}
           <Route path="rewards" element={<RewardsList />} />
           <Route path="rewards/create" element={<RewardCreate />} />
           <Route path="rewards/:id/edit" element={<RewardEdit />} />
@@ -119,8 +129,10 @@ function App() {
           <Route path="payrolls/create" element={<PayrollCreate />} />
           <Route path="payrolls/:id/edit" element={<PayrollEdit />} />
           <Route path="payrolls/:id" element={<PayrollDetail />} />
-
         </Route>
+
+        {/* FALLBACK */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

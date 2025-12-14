@@ -17,6 +17,9 @@ export interface LoginResponse {
   };
 }
 
+/* =======================
+   AUTH HEADER
+======================= */
 function getAuthHeaders() {
   const token = localStorage.getItem("access_token");
   if (!token) return {};
@@ -26,6 +29,34 @@ function getAuthHeaders() {
   };
 }
 
+/* =======================
+   GLOBAL RESPONSE HANDLER
+======================= */
+async function handleResponse<T>(res: Response): Promise<T> {
+  // ❌ Unauthorized → logout + redirect
+  if (res.status === 401) {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("current_user");
+
+    // Ép về trang login
+    window.location.href = "/login";
+
+    throw new Error("Unauthorized");
+  }
+
+  // ❌ Other errors
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(errText || `Request failed (${res.status})`);
+  }
+
+  // ✅ OK
+  return res.json();
+}
+
+/* =======================
+   HTTP METHODS
+======================= */
 export async function apiGet<T>(url: string): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${url}`, {
     headers: {
@@ -34,11 +65,7 @@ export async function apiGet<T>(url: string): Promise<T> {
     },
   });
 
-  if (!res.ok) {
-    throw new Error(`GET ${url} failed (${res.status})`);
-  }
-
-  return res.json();
+  return handleResponse<T>(res);
 }
 
 export async function apiPost<T>(url: string, body: any): Promise<T> {
@@ -51,12 +78,7 @@ export async function apiPost<T>(url: string, body: any): Promise<T> {
     body: JSON.stringify(body),
   });
 
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(errText || `POST ${url} failed (${res.status})`);
-  }
-
-  return res.json();
+  return handleResponse<T>(res);
 }
 
 export async function apiPut<T>(url: string, body: any): Promise<T> {
@@ -69,11 +91,7 @@ export async function apiPut<T>(url: string, body: any): Promise<T> {
     body: JSON.stringify(body),
   });
 
-  if (!res.ok) {
-    throw new Error(`PUT ${url} failed (${res.status})`);
-  }
-
-  return res.json();
+  return handleResponse<T>(res);
 }
 
 export async function apiDelete(url: string): Promise<void> {
@@ -84,12 +102,12 @@ export async function apiDelete(url: string): Promise<void> {
     },
   });
 
-  if (!res.ok) {
-    throw new Error(`DELETE ${url} failed (${res.status})`);
-  }
+  await handleResponse(res);
 }
 
-// API login dùng riêng
+/* =======================
+   LOGIN API
+======================= */
 export async function loginApi(payload: LoginPayload): Promise<LoginResponse> {
   return apiPost<LoginResponse>("/auth/login", payload);
 }
