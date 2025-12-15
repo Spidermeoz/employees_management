@@ -1,24 +1,43 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional
 
+from app.auth.jwt_bearer import JWTBearer
 from app.database import get_db
 from app.models.departments import Department
+from app.models.employees import Employee
 from app.schemas.departments import (
     DepartmentCreate,
-    DepartmentUpdate,
     DepartmentResponse,
+    DepartmentUpdate,
 )
-
-# Sau này muốn bảo vệ bằng JWT thì thêm:
-from app.auth.jwt_bearer import JWTBearer
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
 router = APIRouter(
     prefix="/departments",
     tags=["Departments"],
-    dependencies=[Depends(JWTBearer())]  # bật sau khi làm xong login
+    dependencies=[Depends(JWTBearer())]
 )
+
+
+def map_department_with_manager(dept: Department, db: Session):
+    """Trả về object gồm manager_name"""
+    manager_name = None
+    if dept.manager_id:
+        emp = db.query(Employee).filter(Employee.id == dept.manager_id).first()
+        manager_name = emp.full_name if emp else None
+
+    return {
+        "id": dept.id,
+        "name": dept.name,
+        "description": dept.description,
+        "phone": dept.phone,
+        "manager_id": dept.manager_id,
+        "manager_name": manager_name,
+        "deleted": dept.deleted,
+        "created_at": dept.created_at,
+        "updated_at": dept.updated_at,
+    }
 
 
 @router.get("/", response_model=List[DepartmentResponse])
@@ -28,17 +47,11 @@ def list_departments(
     page: int = 1,
     page_size: int = 50,
 ):
-    """
-    Lấy danh sách phòng ban
-    - Có thể search theo tên
-    - Có phân trang đơn giản
-    """
     query = db.query(Department).filter(Department.deleted == False)
 
     if search:
         like_value = f"%{search}%"
-        # dùng ilike nếu MySQL/MariaDB hỗ trợ collation, không thì .like là đủ
-        query = query.filter(Department.name.ilike(like_value))
+        query = query.filter(Department.name.like(like_value))
 
     if page < 1:
         page = 1
@@ -46,11 +59,12 @@ def list_departments(
         page_size = 50
 
     skip = (page - 1) * page_size
+
     departments = (
         query.order_by(Department.id.desc()).offset(skip).limit(page_size).all()
     )
 
-    return departments
+    return [map_department_with_manager(dept, db) for dept in departments]
 
 
 @router.get("/{department_id}", response_model=DepartmentResponse)
@@ -58,9 +72,6 @@ def get_department(
     department_id: int,
     db: Session = Depends(get_db),
 ):
-    """
-    Lấy chi tiết 1 phòng ban
-    """
     dept = (
         db.query(Department)
         .filter(Department.id == department_id, Department.deleted == False)
@@ -73,21 +84,14 @@ def get_department(
             detail="Không tìm thấy phòng ban",
         )
 
-    return dept
+    return map_department_with_manager(dept, db)
 
 
-@router.post(
-    "/", response_model=DepartmentResponse, status_code=status.HTTP_201_CREATED
-)
+@router.post("/", response_model=DepartmentResponse, status_code=status.HTTP_201_CREATED)
 def create_department(
     data: DepartmentCreate,
     db: Session = Depends(get_db),
 ):
-    """
-    Tạo phòng ban mới
-    - Có check tên trùng (optional)
-    """
-    # Check trùng theo name (nếu bạn muốn đảm bảo unique theo business)
     existed = (
         db.query(Department)
         .filter(Department.name == data.name, Department.deleted == False)
@@ -110,7 +114,7 @@ def create_department(
     db.commit()
     db.refresh(dept)
 
-    return dept
+    return map_department_with_manager(dept, db)
 
 
 @router.put("/{department_id}", response_model=DepartmentResponse)
@@ -119,9 +123,6 @@ def update_department(
     data: DepartmentUpdate,
     db: Session = Depends(get_db),
 ):
-    """
-    Cập nhật phòng ban
-    """
     dept = (
         db.query(Department)
         .filter(Department.id == department_id, Department.deleted == False)
@@ -136,7 +137,6 @@ def update_department(
 
     update_data = data.dict(exclude_unset=True)
 
-    # Nếu có update name, check trùng tên với phòng ban khác
     if "name" in update_data:
         existed = (
             db.query(Department)
@@ -161,7 +161,7 @@ def update_department(
     db.commit()
     db.refresh(dept)
 
-    return dept
+    return map_department_with_manager(dept, db)
 
 
 @router.delete("/{department_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -169,12 +169,6 @@ def delete_department(
     department_id: int,
     db: Session = Depends(get_db),
 ):
-    """
-    Xoá mềm (soft delete) phòng ban:
-    - set deleted = True
-    - set deleted_at = now
-    Lưu ý: tuỳ nghiệp vụ, bạn có thể không cho xoá nếu phòng ban còn nhân viên.
-    """
     dept = (
         db.query(Department)
         .filter(Department.id == department_id, Department.deleted == False)
@@ -191,5 +185,4 @@ def delete_department(
     dept.deleted_at = datetime.utcnow()
 
     db.commit()
-
     return
