@@ -35,25 +35,36 @@ import TimesheetCreate from "./pages/timesheets/TimesheetCreate";
 import TimesheetEdit from "./pages/timesheets/TimesheetEdit";
 import TimesheetDetail from "./pages/timesheets/TimesheetDetail";
 
-// Rewards / Discipline
 import RewardsList from "./pages/rewards/RewardsList";
 import RewardCreate from "./pages/rewards/RewardCreate";
 import RewardEdit from "./pages/rewards/RewardEdit";
 import RewardDetail from "./pages/rewards/RewardDetail";
 
-// Payrolls
 import PayrollList from "./pages/payrolls/PayrollList";
 import PayrollCreate from "./pages/payrolls/PayrollCreate";
 import PayrollEdit from "./pages/payrolls/PayrollEdit";
 import PayrollDetail from "./pages/payrolls/PayrollDetail";
 
 /* =======================
-   AUTH GUARD
+   AUTH GUARD FIXED
 ======================= */
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
-  const token = localStorage.getItem("access_token");
+  const rawToken = localStorage.getItem("access_token");
+
+  // Loại các token không hợp lệ
+  const token =
+    rawToken &&
+    rawToken !== "undefined" &&
+    rawToken !== "null" &&
+    rawToken !== ""
+      ? rawToken
+      : null;
 
   if (!token) {
+    // Xóa token lỗi
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("current_user");
+
     return <Navigate to="/login" replace />;
   }
 
@@ -79,7 +90,6 @@ function App() {
             </AuthGuard>
           }
         >
-          {/* Dashboard */}
           <Route index element={<DashboardPage />} />
 
           {/* Employees */}
@@ -131,8 +141,8 @@ function App() {
           <Route path="payrolls/:id" element={<PayrollDetail />} />
         </Route>
 
-        {/* FALLBACK */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* FALLBACK — luôn đưa về login */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );
