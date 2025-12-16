@@ -1,0 +1,29 @@
+.summary-card {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  border-left: 4px solid transparent;
+}
+.summary-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0.75rem 1.5rem rgba(18, 38, 63, 0.1) !important;
+}
+.summary-card-1 {
+  border-left-color: #0d6efd;
+}
+.summary-card-2 {
+  border-left-color: #198754;
+}
+.summary-card-3 {
+  border-left-color: #ffc107;
+}
+.summary-card-4 {
+  border-left-color: #dc3545;
+}
+
+.icon-box {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
