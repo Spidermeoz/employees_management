@@ -105,7 +105,7 @@ export async function apiDelete(url: string): Promise<void> {
     },
   });
 
-  await handleResponse(res);
+  await handleResponse(res, false);
 }
 
 /* =======================

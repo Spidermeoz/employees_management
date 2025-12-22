@@ -45,6 +45,10 @@ import PayrollCreate from "./pages/payrolls/PayrollCreate";
 import PayrollEdit from "./pages/payrolls/PayrollEdit";
 import PayrollDetail from "./pages/payrolls/PayrollDetail";
 
+import UsersList from "./pages/users/UsersList";
+import UserCreate from "./pages/users/UserCreate";
+import UserEdit from "./pages/users/UserEdit";
+
 /* =======================
    AUTH GUARD FIXED
 ======================= */
@@ -139,6 +143,11 @@ function App() {
           <Route path="payrolls/create" element={<PayrollCreate />} />
           <Route path="payrolls/:id/edit" element={<PayrollEdit />} />
           <Route path="payrolls/:id" element={<PayrollDetail />} />
+
+          <Route path="users" element={<UsersList />} />
+          <Route path="users/create" element={<UserCreate />} />
+          <Route path="users/:id/edit" element={<UserEdit />} />
+
         </Route>
 
         {/* FALLBACK — luôn đưa về login */}

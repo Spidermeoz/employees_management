@@ -5,6 +5,7 @@ from typing import List, Optional
 from app.auth.jwt_bearer import JWTBearer
 from app.database import get_db
 from app.models.employees import Employee
+from app.schemas.common import PaginatedResponse
 from app.schemas.employees import EmployeeCreate, EmployeeResponse, EmployeeUpdate
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
@@ -16,28 +17,22 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=List[EmployeeResponse])
+@router.get("/", response_model=PaginatedResponse[EmployeeResponse])
 def list_employees(
     db: Session = Depends(get_db),
     search: Optional[str] = None,
     department_id: Optional[int] = None,
     status_filter: Optional[str] = None,
     page: int = 1,
-    page_size: int = 20,
+    page_size: int = 10,
 ):
-    """
-    Lấy danh sách nhân viên, hỗ trợ:
-    - search theo tên / mã
-    - lọc phòng ban
-    - lọc trạng thái
-    - phân trang
-    """
     query = db.query(Employee).filter(Employee.deleted == False)
 
     if search:
         like_value = f"%{search}%"
         query = query.filter(
-            (Employee.full_name.ilike(like_value)) | (Employee.code.ilike(like_value))
+            (Employee.full_name.ilike(like_value)) |
+            (Employee.code.ilike(like_value))
         )
 
     if department_id:
@@ -46,16 +41,33 @@ def list_employees(
     if status_filter:
         query = query.filter(Employee.status == status_filter)
 
-    # Phân trang
+    total = query.count()   # 🔥 tổng số nhân viên
+
     if page < 1:
         page = 1
     if page_size <= 0:
-        page_size = 20
+        page_size = 10
 
     skip = (page - 1) * page_size
-    employees = (query.options(joinedload(Employee.salary_grade)).order_by(Employee.id.desc()).offset(skip).limit(page_size).all())
 
-    return employees
+    employees = (
+        query
+        .options(
+            joinedload(Employee.department),
+            joinedload(Employee.position),
+        )
+        .order_by(Employee.id.desc())
+        .offset(skip)
+        .limit(page_size)
+        .all()
+    )
+
+    return {
+        "items": employees,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
 
 
 @router.get("/{employee_id}", response_model=EmployeeResponse)

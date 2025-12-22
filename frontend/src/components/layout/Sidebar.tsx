@@ -11,6 +11,7 @@ import {
   FaClock,
   FaHandHoldingUsd,
   FaAward,
+  FaUserShield,
 } from "react-icons/fa"; // Import các icon cần thiết
 
 const Sidebar: React.FC = () => {
@@ -25,6 +26,7 @@ const Sidebar: React.FC = () => {
     { path: "/timesheets", label: "Chấm công", icon: <FaClock size={20} /> },
     { path: "/payrolls", label: "Bảng lương", icon: <FaHandHoldingUsd size={20} /> },
     { path: "/rewards", label: "Thưởng / phạt", icon: <FaAward size={20} /> },
+    { path: "/users", label: "Quản lý User", icon: <FaUserShield size={20} /> }
   ];
 
   return (

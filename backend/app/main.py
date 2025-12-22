@@ -12,6 +12,7 @@ from app.routers.positions_router import router as PositionsRouter
 from app.routers.rewards_router import router as RewardsRouter
 from app.routers.salary_grades_router import router as SalaryGradesRouter
 from app.routers.timesheets_router import router as TimesheetsRouter
+from app.routers.users_router import router as UsersRouter
 
 Base.metadata.create_all(bind=engine)
 
@@ -39,6 +40,7 @@ app.include_router(ContractsRouter)
 app.include_router(RewardsRouter)
 app.include_router(PayrollsRouter)
 app.include_router(TimesheetsRouter)
+app.include_router(UsersRouter)
 
 
 @app.get("/")
