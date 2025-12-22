@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app import models  # <-- quan trọng: import tất cả models
+from app import models
 from app.database import Base, engine
-from app.routers.auth_router import router as AuthRouter  # sau này dùng
+from app.routers.auth_router import router as AuthRouter
 from app.routers.contracts_router import router as ContractsRouter
 from app.routers.departments_router import router as DepartmentsRouter
 from app.routers.employees_router import router as EmployeesRouter
@@ -24,15 +24,15 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "https://frontend-hr-management-qfs9.vercel.app"
-    ],   # sau này có thể giới hạn domain frontend
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ROUTERS
-app.include_router(AuthRouter)        # khi làm xong auth
-app.include_router(EmployeesRouter)   # Employees CRUD
+app.include_router(AuthRouter)
+app.include_router(EmployeesRouter)
 app.include_router(DepartmentsRouter)
 app.include_router(PositionsRouter)
 app.include_router(SalaryGradesRouter)

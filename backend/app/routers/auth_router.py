@@ -15,10 +15,6 @@ router = APIRouter(
 
 @router.post("/login", response_model=LoginResponse)
 def login(data: LoginRequest, db: Session = Depends(get_db)):
-    """
-    Đăng nhập bằng email + password
-    - Chỉ có sẵn user (không cho tự đăng ký)
-    """
     user = (
         db.query(User)
         .filter(

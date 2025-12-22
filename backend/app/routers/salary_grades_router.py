@@ -26,9 +26,6 @@ def list_grades(
     db: Session = Depends(get_db),
     search: Optional[str] = None,
 ):
-    """
-    Lấy danh sách bậc lương (có search)
-    """
     query = db.query(SalaryGrade).filter(SalaryGrade.deleted == False)
 
     if search:
@@ -40,9 +37,6 @@ def list_grades(
 
 @router.get("/{grade_id}", response_model=SalaryGradeResponse)
 def get_grade(grade_id: int, db: Session = Depends(get_db)):
-    """
-    Lấy thông tin chi tiết 1 bậc lương
-    """
     grade = (
         db.query(SalaryGrade)
         .filter(SalaryGrade.id == grade_id, SalaryGrade.deleted == False)
@@ -57,9 +51,6 @@ def get_grade(grade_id: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=SalaryGradeResponse, status_code=201)
 def create_grade(data: SalaryGradeCreate, db: Session = Depends(get_db)):
-    """
-    Tạo bậc lương mới
-    """
     existed = (
         db.query(SalaryGrade)
         .filter(SalaryGrade.grade_name == data.grade_name, SalaryGrade.deleted == False)
@@ -91,9 +82,6 @@ def update_grade(
     data: SalaryGradeUpdate,
     db: Session = Depends(get_db),
 ):
-    """
-    Cập nhật bậc lương
-    """
     grade = (
         db.query(SalaryGrade)
         .filter(SalaryGrade.id == grade_id, SalaryGrade.deleted == False)
@@ -133,9 +121,6 @@ def update_grade(
 
 @router.delete("/{grade_id}", status_code=204)
 def delete_grade(grade_id: int, db: Session = Depends(get_db)):
-    """
-    Soft delete bậc lương
-    """
     grade = (
         db.query(SalaryGrade)
         .filter(SalaryGrade.id == grade_id, SalaryGrade.deleted == False)

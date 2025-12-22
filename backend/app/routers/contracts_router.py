@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, joinedload
 router = APIRouter(
     prefix="/contracts",
     tags=["Contracts"],
-    dependencies=[Depends(JWTBearer())],  # 🔒 yêu cầu token cho toàn bộ routes trong module
+    dependencies=[Depends(JWTBearer())],  # yêu cầu token cho toàn bộ routes trong module
 )
 
 

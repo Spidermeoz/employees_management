@@ -27,9 +27,6 @@ def list_positions(
     page: int = 1,
     page_size: int = 50,
 ):
-    """
-    Lấy danh sách chức vụ (có search + phân trang)
-    """
     query = db.query(Position).filter(Position.deleted == False)
 
     if search:
@@ -49,9 +46,6 @@ def list_positions(
 
 @router.get("/{position_id}", response_model=PositionResponse)
 def get_position(position_id: int, db: Session = Depends(get_db)):
-    """
-    Lấy chi tiết 1 chức vụ
-    """
     pos = (
         db.query(Position)
         .filter(Position.id == position_id, Position.deleted == False)
@@ -66,9 +60,6 @@ def get_position(position_id: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=PositionResponse, status_code=201)
 def create_position(data: PositionCreate, db: Session = Depends(get_db)):
-    """
-    Tạo chức vụ mới
-    """
     existed = (
         db.query(Position)
         .filter(Position.name == data.name, Position.deleted == False)
@@ -95,9 +86,6 @@ def create_position(data: PositionCreate, db: Session = Depends(get_db)):
 def update_position(
     position_id: int, data: PositionUpdate, db: Session = Depends(get_db)
 ):
-    """
-    Cập nhật chức vụ
-    """
     pos = (
         db.query(Position)
         .filter(Position.id == position_id, Position.deleted == False)
@@ -138,9 +126,6 @@ def update_position(
 
 @router.delete("/{position_id}", status_code=204)
 def delete_position(position_id: int, db: Session = Depends(get_db)):
-    """
-    Soft delete chức vụ
-    """
     pos = (
         db.query(Position)
         .filter(Position.id == position_id, Position.deleted == False)

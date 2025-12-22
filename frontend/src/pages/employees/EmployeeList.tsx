@@ -66,7 +66,7 @@ const EmployeeList: React.FC = () => {
       setLoading(true);
 
       const data = await apiGet<PaginatedResponse<Employee>>(
-        "/employees/paged?page=1&page_size=10"
+        `/employees/paged?page=${currentPage}&page_size=${pageSize}`
       );
 
       setEmployees(data.items);

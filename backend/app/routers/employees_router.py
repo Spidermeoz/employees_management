@@ -15,9 +15,6 @@ router = APIRouter(
     dependencies=[Depends(JWTBearer())]
 )
 
-# ======================================================
-# 1️⃣ ENDPOINT CŨ – GIỮ NGUYÊN ĐỂ KHÔNG VỠ FRONTEND CŨ
-# ======================================================
 
 @router.get("/", response_model=List[EmployeeResponse])
 def list_employees(
@@ -26,11 +23,6 @@ def list_employees(
     department_id: Optional[int] = None,
     status_filter: Optional[str] = None,
 ):
-    """
-    ⚠️ Endpoint CŨ – KHÔNG phân trang
-    Dùng cho các màn hình cũ đang gọi /employees
-    """
-
     query = (
         db.query(Employee)
         .filter(Employee.deleted == False)
@@ -58,7 +50,7 @@ def list_employees(
 
 
 # ======================================================
-# 2️⃣ ENDPOINT MỚI – CÓ PHÂN TRANG (DÙNG CHO LIST PAGE)
+# ENDPOINT MỚI – CÓ PHÂN TRANG (DÙNG CHO LIST PAGE)
 # ======================================================
 
 @router.get("/paged", response_model=PaginatedResponse[EmployeeResponse])
@@ -70,11 +62,6 @@ def list_employees_paged(
     page: int = 1,
     page_size: int = 10,
 ):
-    """
-    ✅ Endpoint MỚI – có phân trang
-    Dùng cho màn hình danh sách nhân viên
-    """
-
     query = (
         db.query(Employee)
         .filter(Employee.deleted == False)
@@ -124,7 +111,7 @@ def list_employees_paged(
 
 
 # ======================================================
-# 3️⃣ GET DETAIL
+# GET DETAIL
 # ======================================================
 
 @router.get("/{employee_id}", response_model=EmployeeResponse)
@@ -147,7 +134,7 @@ def get_employee(employee_id: int, db: Session = Depends(get_db)):
 
 
 # ======================================================
-# 4️⃣ CREATE
+# CREATE
 # ======================================================
 
 @router.post("/", response_model=EmployeeResponse, status_code=status.HTTP_201_CREATED)
@@ -173,7 +160,7 @@ def create_employee(
 
 
 # ======================================================
-# 5️⃣ UPDATE
+# UPDATE
 # ======================================================
 
 @router.put("/{employee_id}", response_model=EmployeeResponse)
@@ -201,7 +188,7 @@ def update_employee(
 
 
 # ======================================================
-# 6️⃣ DELETE (SOFT DELETE)
+# DELETE (SOFT DELETE)
 # ======================================================
 
 @router.delete("/{employee_id}", status_code=status.HTTP_204_NO_CONTENT)

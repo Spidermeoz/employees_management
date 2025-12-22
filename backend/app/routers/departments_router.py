@@ -21,7 +21,6 @@ router = APIRouter(
 
 
 def map_department_with_manager(dept: Department, db: Session):
-    """Trả về object gồm manager_name"""
     manager_name = None
     if dept.manager_id:
         emp = db.query(Employee).filter(Employee.id == dept.manager_id).first()
