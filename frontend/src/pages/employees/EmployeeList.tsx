@@ -65,11 +65,6 @@ const EmployeeList: React.FC = () => {
     try {
       setLoading(true);
 
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        page_size: pageSize.toString(),
-      });
-
       const data = await apiGet<PaginatedResponse<Employee>>(
         "/employees/paged?page=1&page_size=10"
       );
