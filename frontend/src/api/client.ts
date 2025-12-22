@@ -1,5 +1,5 @@
 // src/api/client.ts
-const API_BASE_URL = "http://127.0.0.1:3000"; // backend FastAPI
+const API_BASE_URL = import.meta.env.VITE_API_URL;  // backend FastAPI
 
 export interface LoginPayload {
   email: string;
@@ -20,7 +20,7 @@ export interface LoginResponse {
 /* =======================
    AUTH HEADER
 ======================= */
-function getAuthHeaders() {
+function getAuthHeaders(): Record<string, string> {
   const token = localStorage.getItem("access_token");
   if (!token) return {};
 
@@ -32,7 +32,7 @@ function getAuthHeaders() {
 /* =======================
    GLOBAL RESPONSE HANDLER
 ======================= */
-async function handleResponse<T>(res: Response): Promise<T> {
+async function handleResponse<T>(res: Response, expectBody = true): Promise<T> {
   // ❌ Unauthorized → logout + redirect
   if (res.status === 401) {
     localStorage.removeItem("access_token");
@@ -51,6 +51,9 @@ async function handleResponse<T>(res: Response): Promise<T> {
   }
 
   // ✅ OK
+  if (!expectBody) {
+    return undefined as unknown as T;
+  }
   return res.json();
 }
 

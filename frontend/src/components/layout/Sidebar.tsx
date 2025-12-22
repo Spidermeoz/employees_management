@@ -11,7 +11,6 @@ import {
   FaClock,
   FaHandHoldingUsd,
   FaAward,
-  FaSignOutAlt,
 } from "react-icons/fa"; // Import các icon cần thiết
 
 const Sidebar: React.FC = () => {
