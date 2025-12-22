@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { apiGet, apiDelete } from "../../api/client"; // 🔥 Thêm apiDelete vào đây
+import { apiGet, apiDelete } from "../../api/client";
 import {
   FaEye,
   FaEdit,
@@ -13,26 +13,31 @@ import {
   FaSearch,
 } from "react-icons/fa";
 
-// Kiểu dữ liệu dựa theo EmployeeResponse
+/* ================= TYPES ================= */
+
 type Employee = {
   id: number;
   code: string;
   full_name: string;
   status: string;
   avatar?: string | null;
-  department?: {
-    name: string;
-  };
-  position?: {
-    name: string;
-  };
+  department?: { name: string };
+  position?: { name: string };
 };
 
-// Kiểu dữ liệu cho cấu hình sắp xếp
 type SortConfig = {
   key: keyof Employee | "department.name" | "position.name";
   direction: "asc" | "desc";
 };
+
+type PaginatedResponse<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+/* ================= COMPONENT ================= */
 
 const EmployeeList: React.FC = () => {
   const navigate = useNavigate();
@@ -41,20 +46,36 @@ const EmployeeList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // State cho tìm kiếm và lọc
+  /* FILTER */
   const [search, setSearch] = useState("");
   const [filterDepartment, setFilterDepartment] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
 
-  // State cho sắp xếp
+  /* SORT */
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
-  // 🔥 Tách logic fetch dữ liệu ra một hàm riêng để có thể gọi lại
+  /* PAGINATION */
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  const [total, setTotal] = useState(0);
+
+  /* ================= FETCH ================= */
+
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      const data = await apiGet<Employee[]>("/employees");
-      setEmployees(data);
+
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        page_size: pageSize.toString(),
+      });
+
+      const data = await apiGet<PaginatedResponse<Employee>>(
+        "/employees/paged?page=1&page_size=10"
+      );
+
+      setEmployees(data.items);
+      setTotal(data.total);
     } catch (err) {
       console.error(err);
       setError("Không thể tải danh sách nhân viên.");
@@ -65,128 +86,107 @@ const EmployeeList: React.FC = () => {
 
   useEffect(() => {
     fetchEmployees();
-  }, []);
+  }, [currentPage]);
 
-  // Hàm xử lý sắp xếp
+  /* ================= SORT ================= */
+
   const handleSort = (key: SortConfig["key"]) => {
     let direction: "asc" | "desc" = "asc";
-    if (
-      sortConfig &&
-      sortConfig.key === key &&
-      sortConfig.direction === "asc"
-    ) {
+    if (sortConfig?.key === key && sortConfig.direction === "asc") {
       direction = "desc";
     }
     setSortConfig({ key, direction });
   };
 
-  // Lấy icon sắp xếp cho tiêu đề cột
   const getSortIcon = (key: SortConfig["key"]) => {
-    if (!sortConfig || sortConfig.key !== key) {
-      return <FaSort />;
-    }
+    if (!sortConfig || sortConfig.key !== key) return <FaSort />;
     return sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />;
   };
 
-  // Tạo danh sách phòng ban duy nhất để lọc
+  /* ================= FILTER + SORT ================= */
+
   const departmentList = useMemo(() => {
     const depts = new Set(
-      employees.map((emp) => emp.department?.name).filter(Boolean)
+      employees.map((e) => e.department?.name).filter(Boolean)
     );
     return Array.from(depts);
   }, [employees]);
 
-  // 🔥 Logic lọc và sắp xếp dữ liệu (sử dụng useMemo để tối ưu hiệu năng)
   const sortedAndFilteredEmployees = useMemo(() => {
-    let filteredEmployees = employees.filter((emp) => {
-      const matchesSearch = emp.full_name
+    let data = employees.filter((emp) => {
+      const matchSearch = emp.full_name
         .toLowerCase()
         .includes(search.toLowerCase());
-      const matchesDepartment = filterDepartment
+      const matchDept = filterDepartment
         ? emp.department?.name === filterDepartment
         : true;
-      const matchesStatus = filterStatus ? emp.status === filterStatus : true;
-
-      return matchesSearch && matchesDepartment && matchesStatus;
+      const matchStatus = filterStatus ? emp.status === filterStatus : true;
+      return matchSearch && matchDept && matchStatus;
     });
 
-    // Áp dụng sắp xếp
-    if (sortConfig !== null) {
-      filteredEmployees.sort((a, b) => {
-        const aValue = sortConfig.key.includes(".")
-          ? sortConfig.key.split(".").reduce((o, i) => (o as any)?.[i], a)
-          : a[sortConfig.key as keyof Employee];
+    if (sortConfig) {
+      data.sort((a, b) => {
+        const getValue = (obj: any) =>
+          sortConfig.key.includes(".")
+            ? sortConfig.key.split(".").reduce((o, i) => o?.[i], obj)
+            : obj[sortConfig.key];
 
-        const bValue = sortConfig.key.includes(".")
-          ? sortConfig.key.split(".").reduce((o, i) => (o as any)?.[i], b)
-          : b[sortConfig.key as keyof Employee];
+        const av = getValue(a);
+        const bv = getValue(b);
 
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
+        if (av == null) return 1;
+        if (bv == null) return -1;
 
-        if (aValue < bValue) {
-          return sortConfig.direction === "asc" ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === "asc" ? 1 : -1;
-        }
+        if (av < bv) return sortConfig.direction === "asc" ? -1 : 1;
+        if (av > bv) return sortConfig.direction === "asc" ? 1 : -1;
         return 0;
       });
     }
 
-    return filteredEmployees;
+    return data;
   }, [employees, search, filterDepartment, filterStatus, sortConfig]);
 
-  // 🔥 Hàm xử lý xóa nhân viên
-  const handleDelete = async (id: number, fullName: string) => {
-    const confirmDelete = window.confirm(
-      `Bạn có chắc chắn muốn xóa nhân viên "${fullName}"?`
-    );
-    if (!confirmDelete) {
-      return;
-    }
+  /* ================= DELETE ================= */
 
-    try {
-      await apiDelete(`/employees/${id}`);
-      alert("Xóa nhân viên thành công!");
-      // Tải lại danh sách nhân viên sau khi xóa thành công
-      fetchEmployees();
-    } catch (err) {
-      console.error(err);
-      alert("Lỗi! Không thể xóa nhân viên.");
-    }
+  const handleDelete = async (id: number, name: string) => {
+    if (!window.confirm(`Xóa nhân viên "${name}"?`)) return;
+    await apiDelete(`/employees/${id}`);
+    fetchEmployees();
   };
 
-  if (loading) return <p className="m-3 text-center">Đang tải dữ liệu...</p>;
-  if (error) return <div className="alert alert-danger m-3">{error}</div>;
+  if (loading) return <p className="text-center m-3">Đang tải...</p>;
+  if (error) return <div className="alert alert-danger">{error}</div>;
 
-  // Ảnh mặc định nếu nhân viên chưa có avatar
+  const totalPages = Math.ceil(total / pageSize);
   const defaultAvatar =
     "https://res.cloudinary.com/demo/image/upload/v169110/default_avatar.png";
 
+  /* ================= RENDER ================= */
+
   return (
-    <div className="container-fluid p-4" style={{ backgroundColor: "#f8f9fa" }}>
-      <div className="card shadow-sm border-0">
-        <div className="card-header bg-white py-3">
+    <div className="container-fluid p-4">
+      <div className="card shadow-sm">
+        <div className="card-header bg-white">
           <h3 className="fw-bold mb-0">Danh sách nhân viên</h3>
         </div>
+
         <div className="card-body">
-          {/* SEARCH + FILTERS + ACTIONS */}
-          <div className="row g-3 mb-4 align-items-center">
+          {/* FILTER */}
+          <div className="row g-3 mb-4">
             <div className="col-md-4">
               <div className="input-group">
                 <span className="input-group-text bg-white">
                   <FaSearch />
                 </span>
                 <input
-                  type="text"
-                  className="form-control border-start-0"
+                  className="form-control"
                   placeholder="Tìm theo tên..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
             </div>
+
             <div className="col-md-2">
               <select
                 className="form-select"
@@ -194,13 +194,12 @@ const EmployeeList: React.FC = () => {
                 onChange={(e) => setFilterDepartment(e.target.value)}
               >
                 <option value="">Tất cả phòng ban</option>
-                {departmentList.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
+                {departmentList.map((d) => (
+                  <option key={d}>{d}</option>
                 ))}
               </select>
             </div>
+
             <div className="col-md-2">
               <select
                 className="form-select"
@@ -212,12 +211,13 @@ const EmployeeList: React.FC = () => {
                 <option value="inactive">Không hoạt động</option>
               </select>
             </div>
-            <div className="col-md-4 text-md-end">
+
+            <div className="col-md-4 text-end">
               <button
                 className="btn btn-primary"
                 onClick={() => navigate("/employees/create")}
               >
-                <FaPlus className="me-1" /> Thêm nhân viên
+                <FaPlus /> Thêm nhân viên
               </button>
             </div>
           </div>
@@ -228,53 +228,35 @@ const EmployeeList: React.FC = () => {
               <thead className="table-light">
                 <tr>
                   <th>Avatar</th>
-                  <th
-                    onClick={() => handleSort("code")}
-                    style={{ cursor: "pointer", userSelect: "none" }}
-                  >
+                  <th onClick={() => handleSort("code")}>
                     Mã NV {getSortIcon("code")}
                   </th>
-                  <th
-                    onClick={() => handleSort("full_name")}
-                    style={{ cursor: "pointer", userSelect: "none" }}
-                  >
+                  <th onClick={() => handleSort("full_name")}>
                     Tên {getSortIcon("full_name")}
                   </th>
-                  <th
-                    onClick={() => handleSort("department.name")}
-                    style={{ cursor: "pointer", userSelect: "none" }}
-                  >
+                  <th onClick={() => handleSort("department.name")}>
                     Phòng ban {getSortIcon("department.name")}
                   </th>
-                  <th
-                    onClick={() => handleSort("position.name")}
-                    style={{ cursor: "pointer", userSelect: "none" }}
-                  >
+                  <th onClick={() => handleSort("position.name")}>
                     Chức vụ {getSortIcon("position.name")}
                   </th>
-                  <th
-                    onClick={() => handleSort("status")}
-                    style={{ cursor: "pointer", userSelect: "none" }}
-                  >
+                  <th onClick={() => handleSort("status")}>
                     Trạng thái {getSortIcon("status")}
                   </th>
-                  <th style={{ width: "180px" }}>Hành động</th>
+                  <th>Hành động</th>
                 </tr>
               </thead>
+
               <tbody>
                 {sortedAndFilteredEmployees.map((emp) => (
                   <tr key={emp.id}>
-                    {/* Avatar */}
                     <td>
                       <img
                         src={emp.avatar || defaultAvatar}
-                        alt="avatar"
                         style={{
-                          width: "45px",
-                          height: "45px",
-                          objectFit: "cover",
+                          width: 40,
+                          height: 40,
                           borderRadius: "50%",
-                          border: "1px solid #ddd",
                         }}
                       />
                     </td>
@@ -296,47 +278,71 @@ const EmployeeList: React.FC = () => {
                       </span>
                     </td>
                     <td>
-                      {/* VIEW DETAIL */}
                       <button
-                        className="btn btn-sm btn-info text-white me-1"
+                        className="btn btn-sm btn-info me-1"
                         onClick={() => navigate(`/employees/${emp.id}`)}
-                        title="Xem chi tiết"
                       >
                         <FaEye />
                       </button>
-
-                      {/* EDIT */}
                       <button
                         className="btn btn-sm btn-warning me-1"
                         onClick={() => navigate(`/employees/${emp.id}/edit`)}
-                        title="Chỉnh sửa"
                       >
                         <FaEdit />
                       </button>
-
-                      {/* DELETE */}
-                      {/* NÚT XÓA ĐÃ ĐƯỢC CẬP NHẬT */}
                       <button
                         className="btn btn-sm btn-danger"
                         onClick={() => handleDelete(emp.id, emp.full_name)}
-                        title="Xóa nhân viên"
                       >
                         <FaTrash />
                       </button>
                     </td>
                   </tr>
                 ))}
-
-                {sortedAndFilteredEmployees.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="text-center py-4 text-muted">
-                      Không tìm thấy nhân viên nào phù hợp với điều kiện lọc.
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
+
+          {/* PAGINATION */}
+          <nav className="mt-3">
+            <ul className="pagination justify-content-center">
+              <li className={`page-item ${currentPage === 1 && "disabled"}`}>
+                <button
+                  className="page-link"
+                  onClick={() => setCurrentPage((p) => p - 1)}
+                >
+                  «
+                </button>
+              </li>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <li
+                  key={p}
+                  className={`page-item ${p === currentPage && "active"}`}
+                >
+                  <button
+                    className="page-link"
+                    onClick={() => setCurrentPage(p)}
+                  >
+                    {p}
+                  </button>
+                </li>
+              ))}
+
+              <li
+                className={`page-item ${
+                  currentPage === totalPages && "disabled"
+                }`}
+              >
+                <button
+                  className="page-link"
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                >
+                  »
+                </button>
+              </li>
+            </ul>
+          </nav>
         </div>
       </div>
     </div>
